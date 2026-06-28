@@ -19,9 +19,13 @@ function startLaneCountdown(memberId) {
     if (!lanes[memberId].queueArray || lanes[memberId].queueArray.length === 0) return;
     
     const currentTicket = lanes[memberId].queueArray[0];
-    lanes[memberId].tickets = currentTicket;
-    lanes[memberId].totalSeconds = currentTicket * 30;
-    
+
+    // ถ้าเป็นตั๋วก้อนเดิมที่ถูก pause ไว้ (ยังมีเวลาเหลืออยู่) ให้นับต่อจากเดิม ไม่ใช่รีเซ็ตเวลาใหม่ทั้งหมด
+    if (lanes[memberId].tickets !== currentTicket || lanes[memberId].totalSeconds <= 0) {
+        lanes[memberId].tickets = currentTicket;
+        lanes[memberId].totalSeconds = currentTicket * 30;
+    }
+
     lanes[memberId].isRunning = true;
     lanes[memberId].status = 'running';
 
