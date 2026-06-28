@@ -3,29 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Live Dashboard - Priority Text Theme</title>
+    <title>Live Dashboard - BGG Theme Focus</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
         :root {
-            --sky-gradient: linear-gradient(135deg, #e0c3fc 0%, #fbc2eb 40%, #fed6e3 70%, #fff1eb 100%);
-            --glass-bg: rgba(255, 255, 255, 0.5);
-            --glass-border: rgba(255, 255, 255, 0.6);
+            /* 💡 ปรับความทึบแสงของกระจกฝ้าขึ้นเล็กน้อย (0.65) เพื่อให้ตัวหนังสือลอยเด่นเหนือนภาพพื้นหลังรุ้ง */
+            --glass-bg: rgba(255, 255, 255, 0.65);
+            --glass-border: rgba(255, 255, 255, 0.7);
             --text-main: #2d3748;
             --text-sub: #4a5568;
             
             --success-border: #81c784;
-            --success-bg: rgba(232, 245, 233, 0.75);
+            --success-bg: rgba(232, 245, 233, 0.8);
             --warning-border: #ffd54f;
-            --warning-bg: rgba(255, 248, 225, 0.85);
+            --warning-bg: rgba(255, 248, 225, 0.9);
             --danger-border: #e57373;
-            --danger-bg: rgba(255, 235, 235, 0.85);
+            --danger-bg: rgba(255, 235, 235, 0.9);
         }
 
         * { box-sizing: border-box; }
 
         body { 
-            background: var(--sky-gradient);
+            /* 💡 เปลี่ยนมาใช้ภาพพื้นหลัง BGG.jpg ล็อกสเกลเต็มจอแบบไม่ขยับตามการเลื่อน */
+            background-image: url('img/BGG.jpg');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
             background-attachment: fixed;
+            
             color: var(--text-main); 
             font-family: system-ui, -apple-system, sans-serif; 
             padding: 20px; 
@@ -37,9 +42,9 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            background: rgba(255, 255, 255, 0.35);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.4);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
             border: 1px solid var(--glass-border);
             padding: 12px 25px;
             border-radius: 14px;
@@ -67,36 +72,36 @@
 
         .card { 
             background: var(--glass-bg); 
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
             border: 1px solid var(--glass-border); 
             border-radius: 18px; 
-            padding: 14px 22px; 
+            padding: 16px 24px; 
             display: flex; 
             align-items: center; 
             justify-content: space-between;
             gap: 15px; 
-            box-shadow: 0 6px 20px 0 rgba(142, 148, 179, 0.1);
+            box-shadow: 0 6px 20px 0 rgba(142, 148, 179, 0.12);
             transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.2s ease, opacity 0.5s ease;
             opacity: 1;
         }
 
         .card:hover {
             transform: translateY(-2px);
-            box-shadow: 0 10px 25px 0 rgba(142, 148, 179, 0.18);
+            box-shadow: 0 10px 25px 0 rgba(142, 148, 179, 0.2);
         }
 
         .profile-section {
             display: flex;
             align-items: center;
-            gap: 16px;
+            gap: 18px;
             flex: 1;
             min-width: 0;
         }
 
         .member-avatar {
-            width: 70px;
-            height: 70px;
+            width: 75px;
+            height: 75px;
             border-radius: 50%;
             object-fit: cover;
             border: 2px solid white;
@@ -107,9 +112,8 @@
 
         .name-box { display: flex; flex-direction: column; min-width: 0; gap: 2px; }
         
-        /* 💡 2. ปรับตัวหนังสือชื่อศิลปินให้มีขนาดใหญ่ขึ้นเด่นชัดเป็นพิเศษ */
         .name { 
-            font-size: 2.1rem; 
+            font-size: 2.2rem; 
             font-weight: 900; 
             color: #3b0d3d;
             white-space: nowrap;
@@ -118,7 +122,6 @@
             line-height: 1.1;
         }
 
-        /* 💡 1. ปรับ Text จำนวนคิวปัจจุบันตัวใหญ่ขึ้น */
         .current-ticket { 
             font-size: 1.1rem; 
             color: #4a5568; 
@@ -129,56 +132,46 @@
             font-size: 1.3rem;
         }
         
-        .status-section { display: flex; align-items: center; gap: 20px; }
-        
-        /* 💡 1. ปรับตัวเลขนาฬิกาเวลาวิ่งของคิวปัจจุบันให้เล็กลงกะทัดรัด */
-        .time { 
-            font-size: 1.6rem; 
-            font-family: 'Courier New', Courier, monospace; 
-            font-weight: 800; 
-            color: #52525b; 
-            background: rgba(255,255,255,0.4);
-            padding: 4px 8px;
-            border-radius: 8px;
-            border: 1px solid rgba(255,255,255,0.3);
-        }
+        .status-section { display: flex; align-items: center; }
 
-        /* 💡 1. ปรับป้าย Text สรุปคิวรวมด้านหลังให้มีขนาดตัวหนังสือสะสมใหญ่ขึ้นชัดเจน */
         .stack-badge { 
-            background: rgba(255, 255, 255, 0.65); 
-            border: 1px solid rgba(255, 255, 255, 0.8); 
-            border-radius: 12px; 
-            padding: 8px 14px; 
-            font-size: 1.1rem; /* อัปไซส์ข้อความขึ้น */
+            background: rgba(255, 255, 255, 0.75); 
+            border: 1px solid rgba(255, 255, 255, 0.9); 
+            border-radius: 14px; 
+            padding: 8px 18px; 
+            font-size: 1.15rem; 
             font-weight: 700;
             color: var(--text-main); 
             text-align: center;
-            line-height: 1.3;
-            min-width: 140px;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+            line-height: 1.4;
+            min-width: 160px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.02);
         }
-        .stack-badge strong { color: #b83280; font-size: 1.5rem; font-weight: 900; }
-        .stack-badge .wait-time { font-size: 0.85rem; color: #64748b; font-weight: 600; margin-top: 1px; }
+        .stack-badge .wait-highlight {
+            color: #b83280;
+            font-size: 1.6rem;
+            font-weight: 900;
+            display: block;
+            margin-bottom: 1px;
+        }
+        .stack-badge .total-queue {
+            font-size: 0.85rem;
+            color: #64748b;
+            font-weight: 600;
+        }
 
         .card.running { background: var(--success-bg); border-color: var(--success-border); }
-        .card.running .time { color: #1b5e20; background: rgba(255,255,255,0.6); }
         .card.running .member-avatar { border-color: var(--success-border); }
         
         .card.warning { background: var(--warning-bg); border-color: var(--warning-border); animation: pulse-glow 1s infinite alternate; }
-        .card.warning .time { color: #e65100; background: rgba(255,255,255,0.6); }
         .card.warning .member-avatar { border-color: var(--warning-border); }
         
-        .card.timeout { background: var(--danger-bg); border-color: var(--danger-border); animation: flash-bg 0.6s infinite alternate; }
-        .card.timeout .time { color: #b71c1c; background: rgba(255,255,255,0.6); }
+        .card.timeout { background: var(--danger-bg); border-color: var(--danger-border); }
         .card.timeout .member-avatar { border-color: var(--danger-border); }
 
         @keyframes pulse-glow {
             0% { box-shadow: 0 4px 15px 0 rgba(255, 213, 79, 0.2); }
             100% { box-shadow: 0 4px 15px 6px rgba(255, 213, 79, 0.35); }
-        }
-        @keyframes flash-bg {
-            0% { border-color: var(--danger-border); }
-            100% { border-color: #ff1744; background: rgba(255, 205, 210, 0.85); }
         }
     </style>
 </head>
@@ -205,6 +198,7 @@
                 return { memberId: id, ...lanesDataStore[id] };
             });
 
+            // เรียงลำดับคิวสะสมจากมากไปน้อย
             sortedLanes.sort((a, b) => {
                 const countA = a.queueStack || 0;
                 const countB = b.queueStack || 0;
@@ -219,10 +213,6 @@
             grid.innerHTML = '';
             
             top14Lanes.forEach(lane => {
-                const totalSec = lane.totalSeconds || 0;
-                const min = String(Math.floor(totalSec / 60)).padStart(2, '0');
-                const sec = String(totalSec % 60).padStart(2, '0');
-                
                 const qStack = lane.queueStack || 0;
                 const waitMinutes = Math.ceil((qStack * 30) / 60);
                 const currentTickets = lane.tickets || 0;
@@ -232,20 +222,18 @@
                 card.id = `card-${lane.memberId}`;
                 card.className = `card ${statusStr}`;
                 
-                // 💡 ปรับการเรนเดอร์โครงสร้างภายใน เน้นตัวเลขขนาดใหญ่ และจัดวางสวยงามสะดุดตา
                 card.innerHTML = `
                     <div class="profile-section">
-                        <img class="member-avatar" src="img/${lane.memberId}.jpg" alt="${lane.name}" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'65\' height=\'65\' viewBox=\'0 0 65 65\'><rect width=\'65\' height=\'65\' fill=\'%23cbd5e1\'/><text x=\'50%\' y=\'55%\' font-family=\'sans-serif\' font-size=\'28\' fill=\'%2364748b\' text-anchor=\'middle\'>👤</text></svg>'">
+                        <img class="member-avatar" src="img/${lane.memberId}.jpg" alt="${lane.name}" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'75\' height=\'75\' viewBox=\'0 0 75 75\'><rect width=\'75\' height=\'75\' fill=\'%23cbd5e1\'/><text x=\'50%\' y=\'55%\' font-family=\'sans-serif\' font-size=\'32\' fill=\'%2364748b\' text-anchor=\'middle\'>👤</text></svg>'">
                         <div class="name-box">
                             <div class="name">${lane.name}</div>
                             <div class="current-ticket">คิวปัจจุบัน: <strong>${currentTickets}</strong> ใบ</div>
                         </div>
                     </div>
                     <div class="status-section">
-                        <div class="time">${min}:${sec}</div>
                         <div class="stack-badge">
-                            คิวรวม: <strong>${qStack}</strong> ใบ
-                            <div class="wait-time">⏱️ รอประมาณ ${waitMinutes} นาที</div>
+                            <span class="wait-highlight">⏱️ รอ ~ ${waitMinutes} นาที</span>
+                            <span class="total-queue">คิวสะสมทั้งหมด: ${qStack} ใบ</span>
                         </div>
                     </div>
                 `;
