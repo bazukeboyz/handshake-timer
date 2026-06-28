@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Live Dashboard - Realtime Wait Focus</title>
+    <title>Live Dashboard - BGG Core Focus</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
         :root {
@@ -11,13 +11,8 @@
             --glass-border: rgba(255, 255, 255, 0.7);
             --text-main: #2d3748;
             --text-sub: #4a5568;
-            
             --success-border: #81c784;
             --success-bg: rgba(232, 245, 233, 0.8);
-            --warning-border: #ffd54f;
-            --warning-bg: rgba(255, 248, 225, 0.9);
-            --danger-border: #e57373;
-            --danger-bg: rgba(255, 235, 235, 0.9);
         }
 
         * { box-sizing: border-box; }
@@ -35,87 +30,30 @@
             min-height: 100vh;
         }
 
-        .header-dash {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: rgba(255, 255, 255, 0.4);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid var(--glass-border);
-            padding: 12px 25px;
-            border-radius: 14px;
-            margin-bottom: 20px;
-            box-shadow: 0 4px 20px 0 rgba(162, 142, 179, 0.15);
-        }
+        .header-dash { display: flex; justify-content: space-between; align-items: center; background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid var(--glass-border); padding: 12px 25px; border-radius: 14px; margin-bottom: 20px; box-shadow: 0 4px 20px 0 rgba(162, 142, 179, 0.15); }
+        .header-dash h1 { margin: 0; font-size: 1.5rem; font-weight: 800; background: linear-gradient(45deg, #6b46c1, #b83280); -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: 0.5px; }
 
-        .header-dash h1 { 
-            margin: 0; 
-            font-size: 1.5rem; 
-            font-weight: 800;
-            background: linear-gradient(45deg, #6b46c1, #b83280);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            letter-spacing: 0.5px;
-        }
+        .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; max-width: 1400px; margin: 0 auto; }
+        /* เมื่อมีเมมเบอร์เกิน 10 คน สลับเป็น 3 คอลัมน์เพื่อให้ครบ 14 ใบในจอเดียวโดยไม่ตกขอบ */
+        .grid.cols-3 { grid-template-columns: repeat(3, 1fr); gap: 10px; }
 
-        .grid { 
-            display: grid; 
-            grid-template-columns: repeat(2, 1fr); 
-            gap: 15px; 
-            max-width: 1400px;
-            margin: 0 auto;
-        }
+        .card { background: var(--glass-bg); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); border: 1px solid var(--glass-border); border-radius: 18px; padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; gap: 15px; box-shadow: 0 6px 20px 0 rgba(142, 148, 179, 0.12); transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.2s ease, opacity 0.5s ease; opacity: 1; }
+        /* โหมดย่อขนาด: ซ่อนรูปและลด padding เพื่อเพิ่มพื้นที่แสดงผลตอนมีเลนจำนวนมาก */
+        .card.compact { padding: 10px 14px; gap: 8px; }
+        .card.compact .member-avatar { display: none; }
 
-        .card { 
-            background: var(--glass-bg); 
-            backdrop-filter: blur(18px);
-            -webkit-backdrop-filter: blur(18px);
-            border: 1px solid var(--glass-border); 
-            border-radius: 18px; 
-            padding: 16px 24px; 
-            display: flex; 
-            align-items: center; 
-            justify-content: space-between;
-            gap: 15px; 
-            box-shadow: 0 6px 20px 0 rgba(142, 148, 179, 0.12);
-            transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.2s ease, opacity 0.5s ease;
-            opacity: 1;
-        }
-
-        .card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 25px 0 rgba(142, 148, 179, 0.2);
-        }
-
-        .profile-section {
-            display: flex;
-            align-items: center;
-            gap: 18px;
-            flex: 1;
-            min-width: 0;
-        }
-
-        .member-avatar {
-            width: 75px;
-            height: 75px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 2px solid white;
-            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
-            background: #e2e8f0;
-            flex-shrink: 0;
-        }
-
+        .profile-section { display: flex; align-items: center; gap: 18px; flex: 1; min-width: 0; }
+        .member-avatar { width: 75px; height: 75px; border-radius: 50%; object-fit: cover; border: 2px solid white; box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08); background: #e2e8f0; flex-shrink: 0; }
+        
         .name-box { 
             display: flex; 
             flex-direction: column; 
             min-width: 0; 
             gap: 2px; 
-            justify-content: center; /* จัดชื่อให้อยู่ตรงกลางแนวดิ่งอย่างสวยงามแทนข้อความเดิม */
+            justify-content: center; /* จัดตำแหน่งกึ่งกลางแนวดิ่งอย่างสวยงามแทนที่ข้อความเดิม */
         }
         
-        /* 💡 🌟 ขยายขนาดชื่อ Member ให้ใหญ่พิเศษ เด่นชัดเต็มพื้นที่ฝั่งซ้าย */
+        /* 💡 🌟 ปรับขนาดชื่อศิลปินของระบบที่ 2 ให้ใหญ่สะดุดตาพิเศษระนาบเดียวกัน */
         .name { 
             font-size: 2.8rem; 
             font-weight: 900; 
@@ -128,45 +66,12 @@
         
         .status-section { display: flex; align-items: center; }
 
-        .stack-badge { 
-            background: rgba(255, 255, 255, 0.75); 
-            border: 1px solid rgba(255, 255, 255, 0.9); 
-            border-radius: 14px; 
-            padding: 8px 18px; 
-            font-size: 1.15rem; 
-            font-weight: 700;
-            color: var(--text-main); 
-            text-align: center;
-            line-height: 1.4;
-            min-width: 160px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.02);
-        }
-        .stack-badge .wait-highlight {
-            color: #b83280;
-            font-size: 1.6rem;
-            font-weight: 900;
-            display: block;
-            margin-bottom: 1px;
-        }
-        .stack-badge .total-queue {
-            font-size: 0.85rem;
-            color: #64748b;
-            font-weight: 600;
-        }
-
-        .card.running { background: var(--success-bg); border-color: var(--success-border); }
-        .card.running .member-avatar { border-color: var(--success-border); }
-        
-        .card.warning { background: var(--warning-bg); border-color: var(--warning-border); animation: pulse-glow 1s infinite alternate; }
-        .card.warning .member-avatar { border-color: var(--warning-border); }
-        
-        .card.timeout { background: var(--danger-bg); border-color: var(--danger-border); }
-        .card.timeout .member-avatar { border-color: var(--danger-border); }
-
-        @keyframes pulse-glow {
-            0% { box-shadow: 0 4px 15px 0 rgba(255, 213, 79, 0.2); }
-            100% { box-shadow: 0 4px 15px 6px rgba(255, 213, 79, 0.35); }
-        }
+        .stack-badge { background: rgba(255, 255, 255, 0.75); border: 1px solid rgba(255, 255, 255, 0.9); border-radius: 14px; padding: 8px 18px; font-size: 1.15rem; font-weight: 700; color: var(--text-main); text-align: center; line-height: 1.4; min-width: 160px; box-shadow: 0 4px 10px rgba(0,0,0,0.02); }
+        .stack-badge .wait-highlight { color: #b83280; font-size: 1.6rem; font-weight: 900; display: block; margin-bottom: 1px; }
+        .stack-badge .total-queue { font-size: 0.85rem; color: #64748b; font-weight: 600; }
+        .card.compact .stack-badge { min-width: 110px; padding: 6px 10px; }
+        .card.compact .stack-badge .wait-highlight { font-size: 1.15rem; }
+        .card.compact .stack-badge .total-queue { font-size: 0.7rem; }
     </style>
 </head>
 <body>
@@ -183,90 +88,75 @@
     <script>
         const socket = io();
         const grid = document.getElementById('monitor-grid');
-        
         let lanesDataStore = {};
         let clearTimeouts = {};
+
+        // คำนวณขนาดฟอนต์ชื่อแบบไดนามิก: ชื่อยาวกว่า 5 ตัวอักษรจะถูกย่อขนาดลงเพื่อไม่ให้ล้นกรอบ/ถูกตัด (...)
+        function getNameFontSize(name, compact) {
+            const len = (name || '').length;
+            let size = 2.8;
+            if (len > 9) size = 1.5;
+            else if (len > 7) size = 1.8;
+            else if (len > 5) size = 2.2;
+            if (compact) size = size * 0.6;
+            return size.toFixed(2);
+        }
 
         function renderSortedGrid() {
             let sortedLanes = Object.keys(lanesDataStore).map(id => {
                 return { memberId: id, ...lanesDataStore[id] };
             });
 
-            sortedLanes.sort((a, b) => {
-                const countA = a.queueStack || 0;
-                const countB = b.queueStack || 0;
-                if (countB !== countA) return countB - countA;
-                
-                const secA = a.totalSeconds || 0;
-                const secB = b.totalSeconds || 0;
-                return secA - secB;
-            });
+            let activeLanes = sortedLanes.filter(l => (l.queueStack || 0) > 0);
+            activeLanes.sort((a, b) => (b.queueStack || 0) - (a.queueStack || 0));
 
-            let top14Lanes = sortedLanes.slice(0, 14);
+            let top14Lanes = activeLanes.slice(0, 14);
+
+            // เกิน 10 เลนขึ้นไป สลับเป็น 3 คอลัมน์ + ซ่อนรูปเพื่อให้แสดงครบ 14 เลนในจอเดียว
+            const isCompact = top14Lanes.length > 10;
+            grid.className = isCompact ? 'grid cols-3' : 'grid';
             grid.innerHTML = '';
-            
+
             top14Lanes.forEach(lane => {
                 const qStack = lane.queueStack || 0;
-                const currentTickets = lane.tickets || 0;
-                const statusStr = lane.status || 'idle';
-                const currentRunningSeconds = lane.totalSeconds || 0;
-
-                let totalWaitSeconds = 0;
-                if (statusStr === 'running' || statusStr === 'warning') {
-                    const remainingQueueTickets = Math.max(0, qStack - currentTickets);
-                    totalWaitSeconds = currentRunningSeconds + (remainingQueueTickets * 30);
-                } else {
-                    totalWaitSeconds = qStack * 30;
-                }
-
-                const waitMinutes = Math.ceil(totalWaitSeconds / 60);
+                const waitMinutes = Math.ceil((qStack * 30) / 60);
+                const nameFontSize = getNameFontSize(lane.name, isCompact);
 
                 const card = document.createElement('div');
                 card.id = `card-${lane.memberId}`;
-                card.className = `card ${statusStr}`;
-                
-                // 💡 🌟 ถอดข้อความเดิมออก แล้วปรับตำแหน่งให้ชื่อเมมเบอร์เด่นสะดุดตาที่สุด
+                card.className = `card running${isCompact ? ' compact' : ''}`;
+
+                // 💡 🌟 นำเอาข้อความ "เลนกำลังเปิดให้บริการ" ออก และใช้โครงสร้างชื่อแบบขยายใหญ่พิเศษ
                 card.innerHTML = `
                     <div class="profile-section">
                         <img class="member-avatar" src="img/${lane.memberId}.jpg" alt="${lane.name}" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'75\' height=\'75\' viewBox=\'0 0 75 75\'><rect width=\'75\' height=\'75\' fill=\'%23cbd5e1\'/><text x=\'50%\' y=\'55%\' font-family=\'sans-serif\' font-size=\'32\' fill=\'%2364748b\' text-anchor=\'middle\'>👤</text></svg>'">
                         <div class="name-box">
-                            <div class="name">${lane.name}</div>
+                            <div class="name" style="font-size:${nameFontSize}rem">${lane.name}</div>
                         </div>
                     </div>
                     <div class="status-section">
                         <div class="stack-badge">
                             <span class="wait-highlight">⏱ รอประมาณ ~ ${waitMinutes} นาที</span>
-                            <span class="total-queue">คิวสะสมทั้งหมด: ${qStack} ใบ</span>
+                            <span class="total-queue">จำนวนตั๋วสะสม: ${qStack} ใบ</span>
                         </div>
                     </div>
                 `;
-                
                 grid.appendChild(card);
             });
         }
 
         function processLaneUpdate(memberId, name, totalSeconds, status, tickets, queueStack = 0) {
-            if (clearTimeouts[memberId]) {
-                clearTimeout(clearTimeouts[memberId]);
-                delete clearTimeouts[memberId];
-            }
+            if (clearTimeouts[memberId]) { clearTimeout(clearTimeouts[memberId]); delete clearTimeouts[memberId]; }
 
-            lanesDataStore[memberId] = {
-                name: name,
-                totalSeconds: totalSeconds || 0,
-                status: status || 'idle',
-                tickets: tickets || 0,
-                queueStack: queueStack || 0
-            };
+            lanesDataStore[memberId] = { name, totalSeconds, status, tickets, queueStack };
 
-            if ((status === 'timeout' || status === 'idle') && (queueStack === 0)) {
+            if ((status === 'timeout' || status === 'idle') && queueStack === 0) {
                 clearTimeouts[memberId] = setTimeout(() => {
                     delete lanesDataStore[memberId];
                     renderSortedGrid();
                     delete clearTimeouts[memberId];
                 }, 10000);
             }
-
             renderSortedGrid();
         }
 
@@ -275,13 +165,7 @@
             if (allLanes) {
                 Object.keys(allLanes).forEach(id => {
                     const lane = allLanes[id];
-                    lanesDataStore[id] = {
-                        name: lane.name,
-                        totalSeconds: lane.totalSeconds || 0,
-                        status: lane.status || 'idle',
-                        tickets: lane.tickets || 0,
-                        queueStack: lane.queueStack || 0
-                    };
+                    lanesDataStore[id] = { name: lane.name, totalSeconds: lane.totalSeconds || 0, status: lane.status || 'idle', tickets: lane.tickets || 0, queueStack: lane.queueStack || 0 };
                 });
             }
             renderSortedGrid();
@@ -290,14 +174,7 @@
         socket.on('lane_updated', (payload) => {
             if (!payload || !payload.memberId || !payload.data) return;
             const name = lanesDataStore[payload.memberId] ? lanesDataStore[payload.memberId].name : payload.memberId.toUpperCase();
-            processLaneUpdate(
-                payload.memberId, 
-                name, 
-                payload.data.totalSeconds, 
-                payload.data.status, 
-                payload.data.tickets, 
-                payload.data.queueStack
-            );
+            processLaneUpdate(payload.memberId, name, payload.data.totalSeconds, payload.data.status, payload.data.tickets, payload.data.queueStack);
         });
         
         socket.on('lane_reseted', (payload) => { 
