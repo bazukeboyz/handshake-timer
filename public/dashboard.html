@@ -107,17 +107,23 @@
             flex-shrink: 0;
         }
 
-        .name-box { display: flex; flex-direction: column; min-width: 0; gap: 2px; }
-        .name { font-size: 2.2rem; font-weight: 900; color: #3b0d3d; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.1; }
-        
-        .current-ticket { 
-            font-size: 1.1rem; 
-            color: #4a5568; 
-            font-weight: 700; 
+        .name-box { 
+            display: flex; 
+            flex-direction: column; 
+            min-width: 0; 
+            gap: 2px; 
+            justify-content: center; /* จัดชื่อให้อยู่ตรงกลางแนวดิ่งอย่างสวยงามแทนข้อความเดิม */
         }
-        .current-ticket strong {
-            color: #6b46c1;
-            font-size: 1.3rem;
+        
+        /* 💡 🌟 ขยายขนาดชื่อ Member ให้ใหญ่พิเศษ เด่นชัดเต็มพื้นที่ฝั่งซ้าย */
+        .name { 
+            font-size: 2.8rem; 
+            font-weight: 900; 
+            color: #3b0d3d; 
+            white-space: nowrap; 
+            overflow: hidden; 
+            text-overflow: ellipsis; 
+            line-height: 1.1; 
         }
         
         .status-section { display: flex; align-items: center; }
@@ -186,7 +192,6 @@
                 return { memberId: id, ...lanesDataStore[id] };
             });
 
-            // เรียงลำดับจากยอดรวมตั๋วสะสมมากสุดไปน้อยสุด
             sortedLanes.sort((a, b) => {
                 const countA = a.queueStack || 0;
                 const countB = b.queueStack || 0;
@@ -206,30 +211,26 @@
                 const statusStr = lane.status || 'idle';
                 const currentRunningSeconds = lane.totalSeconds || 0;
 
-                // 💡 🌟 ปรับปรุงลอจิกการคำนวณนาทีตรงนี้ใหม่ให้ตรงตามวินาทีจริง!
                 let totalWaitSeconds = 0;
                 if (statusStr === 'running' || statusStr === 'warning') {
-                    // หากเวลากำลังวิ่งอยู่: ระยะเวลารอจริง = วินาทีที่เหลือของคิวปัจจุบัน + (ตั๋วคิวสะสมก้อนที่เหลือล่วงหน้าหลังแถว * 30 วินาที)
                     const remainingQueueTickets = Math.max(0, qStack - currentTickets);
                     totalWaitSeconds = currentRunningSeconds + (remainingQueueTickets * 30);
                 } else {
-                    // หากเวลายังไม่เดิน: คิดตามจำนวนตั๋วทั้งหมดคูณ 30
                     totalWaitSeconds = qStack * 30;
                 }
 
-                // แปลงวินาทีรวมออกมาเป็นนาทีจริง Math.ceil ปรับเศษขึ้นแบบ Real-time
                 const waitMinutes = Math.ceil(totalWaitSeconds / 60);
 
                 const card = document.createElement('div');
                 card.id = `card-${lane.memberId}`;
                 card.className = `card ${statusStr}`;
                 
+                // 💡 🌟 ถอดข้อความเดิมออก แล้วปรับตำแหน่งให้ชื่อเมมเบอร์เด่นสะดุดตาที่สุด
                 card.innerHTML = `
                     <div class="profile-section">
                         <img class="member-avatar" src="img/${lane.memberId}.jpg" alt="${lane.name}" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'75\' height=\'75\' viewBox=\'0 0 75 75\'><rect width=\'75\' height=\'75\' fill=\'%23cbd5e1\'/><text x=\'50%\' y=\'55%\' font-family=\'sans-serif\' font-size=\'32\' fill=\'%2364748b\' text-anchor=\'middle\'>👤</text></svg>'">
                         <div class="name-box">
                             <div class="name">${lane.name}</div>
-                            <div class="current-ticket">คิวปัจจุบัน: <strong>${currentTickets}</strong> ใบ</div>
                         </div>
                     </div>
                     <div class="status-section">
