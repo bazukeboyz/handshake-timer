@@ -8,6 +8,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 let lanes = {}; 
 
+// ฟังก์ชันคำนวณยอดรวมตั๋วค้างทั้งหมดในถาดสะสม
 function getQueueStackCount(memberId) {
     if (!lanes[memberId] || !lanes[memberId].queueArray) return 0;
     return lanes[memberId].queueArray.reduce((a, b) => a + b, 0);
@@ -17,7 +18,6 @@ function startLaneCountdown(memberId) {
     if (!lanes[memberId] || lanes[memberId].isRunning) return;
     if (!lanes[memberId].queueArray || lanes[memberId].queueArray.length === 0) return;
     
-    // 💡 ปรับปรุงตรงนี้: ดึงตั๋วก้อนแรกสุดในถาดออกมารันจับเวลาทันที
     const currentTicket = lanes[memberId].queueArray[0];
     lanes[memberId].tickets = currentTicket;
     lanes[memberId].totalSeconds = currentTicket * 30;
@@ -25,7 +25,6 @@ function startLaneCountdown(memberId) {
     lanes[memberId].isRunning = true;
     lanes[memberId].status = 'running';
 
-    // ล้างตัวนับเวลาเก่าทิ้งก่อนเริ่มใหม่ป้องกันเวลาวิ่งซ้อนกัน
     if (lanes[memberId].intervalId) clearInterval(lanes[memberId].intervalId);
 
     lanes[memberId].intervalId = setInterval(() => {
@@ -35,7 +34,7 @@ function startLaneCountdown(memberId) {
                 lanes[memberId].status = 'warning';
             }
         } else {
-            // หมดเวลาคิวปัจจุบัน -> สลัดตั๋วก้อนแรกออกจากถาด
+            // หมดเวลาคิวปัจจุบัน -> เอาตั๋วก้อนแรกออกจากถาด
             lanes[memberId].queueArray.shift();
             
             const timeStr = new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -77,6 +76,7 @@ io.on('connection', (socket) => {
     });
     socket.emit('init_all_lanes', initData);
 
+    // 📥 ปุ่มเพิ่มคิวสะสมล่วงหน้า
     socket.on('add_to_stack', (data) => {
         const { memberId, tickets, name } = data;
         if (!lanes[memberId]) {
@@ -86,25 +86,38 @@ io.on('connection', (socket) => {
         broadcastLaneUpdate(memberId);
     });
 
+    // 🔸 ปุ่มหักลบยอดคิวถอยหลังออกจากกองท้ายสุด (- ลบออก)
     socket.on('remove_from_stack', (data) => {
         const { memberId, tickets } = data;
         if (lanes[memberId] && lanes[memberId].queueArray.length > 0) {
             let lastIdx = lanes[memberId].queueArray.length - 1;
+            
+            // 💡 [ล็อกเซฟตี้จุดที่ 1]: ถ้าเหลือตั๋วก้อนเดียวใน Array และก้อนนั้นกำลังรันเวลาอยู่ ห้ามกดลบเด็ดขาด!
+            if (lastIdx === 0 && lanes[memberId].isRunning) {
+                return; 
+            }
+
             lanes[memberId].queueArray[lastIdx] -= tickets;
             if (lanes[memberId].queueArray[lastIdx] <= 0) lanes[memberId].queueArray.pop();
             broadcastLaneUpdate(memberId);
         }
     });
 
+    // ❌ ปุ่มกากบาทคลิกลบตั๋วเฉพาะก้อนในถาดสะสม
     socket.on('remove_piece_from_stack', (data) => {
         const { memberId, index } = data;
         if (lanes[memberId] && lanes[memberId].queueArray[index] !== undefined) {
+            
+            // 💡 [ล็อกเซฟตี้จุดที่ 2]: หากสตาฟกดลบตั๋วก้อนดัชนีที่ 0 (ก้อนแรกสุด) ขณะที่กำลังนับเวลาคุยอยู่ ห้ามลบเด็ดขาด!
+            if (index === 0 && lanes[memberId].isRunning) {
+                return;
+            }
+
             lanes[memberId].queueArray.splice(index, 1);
             broadcastLaneUpdate(memberId);
         }
     });
 
-    // 💡 แก้ไขจุดนี้ให้แมตช์กัน: รับแค่ไอดีมาแล้วสั่งให้ฟังก์ชันรันเวลาทำงานได้ทันที
     socket.on('trigger_manual_start', (data) => {
         const { memberId } = data;
         if (lanes[memberId] && lanes[memberId].queueArray.length > 0 && !lanes[memberId].isRunning) {
