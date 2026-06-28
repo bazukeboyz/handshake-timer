@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Live Dashboard - 7 Rows 2 Columns (Auto-Sort)</title>
+    <title>Live Dashboard - Priority Text Theme</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
         :root {
@@ -71,7 +71,7 @@
             -webkit-backdrop-filter: blur(16px);
             border: 1px solid var(--glass-border); 
             border-radius: 18px; 
-            padding: 12px 18px; 
+            padding: 14px 22px; 
             display: flex; 
             align-items: center; 
             justify-content: space-between;
@@ -89,14 +89,14 @@
         .profile-section {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 16px;
             flex: 1;
             min-width: 0;
         }
 
         .member-avatar {
-            width: 65px;
-            height: 65px;
+            width: 70px;
+            height: 70px;
             border-radius: 50%;
             object-fit: cover;
             border: 2px solid white;
@@ -105,36 +105,71 @@
             flex-shrink: 0;
         }
 
-        .name-box { display: flex; flex-direction: column; min-width: 0; }
-        .name { font-size: 1.4rem; font-weight: 750; color: #4a154b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .current-ticket { font-size: 0.8rem; color: var(--text-sub); font-weight: 600; }
+        .name-box { display: flex; flex-direction: column; min-width: 0; gap: 2px; }
         
-        .status-section { display: flex; align-items: center; gap: 15px; }
-        .time { font-size: 2.8rem; font-family: 'Courier New', Courier, monospace; font-weight: 700; color: #334155; line-height: 1; }
+        /* 💡 2. ปรับตัวหนังสือชื่อศิลปินให้มีขนาดใหญ่ขึ้นเด่นชัดเป็นพิเศษ */
+        .name { 
+            font-size: 2.1rem; 
+            font-weight: 900; 
+            color: #3b0d3d;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            line-height: 1.1;
+        }
 
+        /* 💡 1. ปรับ Text จำนวนคิวปัจจุบันตัวใหญ่ขึ้น */
+        .current-ticket { 
+            font-size: 1.1rem; 
+            color: #4a5568; 
+            font-weight: 700; 
+        }
+        .current-ticket strong {
+            color: #6b46c1;
+            font-size: 1.3rem;
+        }
+        
+        .status-section { display: flex; align-items: center; gap: 20px; }
+        
+        /* 💡 1. ปรับตัวเลขนาฬิกาเวลาวิ่งของคิวปัจจุบันให้เล็กลงกะทัดรัด */
+        .time { 
+            font-size: 1.6rem; 
+            font-family: 'Courier New', Courier, monospace; 
+            font-weight: 800; 
+            color: #52525b; 
+            background: rgba(255,255,255,0.4);
+            padding: 4px 8px;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+
+        /* 💡 1. ปรับป้าย Text สรุปคิวรวมด้านหลังให้มีขนาดตัวหนังสือสะสมใหญ่ขึ้นชัดเจน */
         .stack-badge { 
-            background: rgba(255, 255, 255, 0.6); 
-            border: 1px solid rgba(255, 255, 255, 0.7); 
-            border-radius: 10px; 
-            padding: 6px 10px; 
-            font-size: 0.78rem; 
-            color: var(--text-sub); 
+            background: rgba(255, 255, 255, 0.65); 
+            border: 1px solid rgba(255, 255, 255, 0.8); 
+            border-radius: 12px; 
+            padding: 8px 14px; 
+            font-size: 1.1rem; /* อัปไซส์ข้อความขึ้น */
+            font-weight: 700;
+            color: var(--text-main); 
             text-align: center;
             line-height: 1.3;
-            min-width: 100px;
+            min-width: 140px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.03);
         }
-        .stack-badge strong { color: #b83280; font-size: 1rem; }
+        .stack-badge strong { color: #b83280; font-size: 1.5rem; font-weight: 900; }
+        .stack-badge .wait-time { font-size: 0.85rem; color: #64748b; font-weight: 600; margin-top: 1px; }
 
         .card.running { background: var(--success-bg); border-color: var(--success-border); }
-        .card.running .time { color: #2e7d32; }
+        .card.running .time { color: #1b5e20; background: rgba(255,255,255,0.6); }
         .card.running .member-avatar { border-color: var(--success-border); }
         
         .card.warning { background: var(--warning-bg); border-color: var(--warning-border); animation: pulse-glow 1s infinite alternate; }
-        .card.warning .time { color: #f57f17; }
+        .card.warning .time { color: #e65100; background: rgba(255,255,255,0.6); }
         .card.warning .member-avatar { border-color: var(--warning-border); }
         
         .card.timeout { background: var(--danger-bg); border-color: var(--danger-border); animation: flash-bg 0.6s infinite alternate; }
-        .card.timeout .time { color: #c62828; }
+        .card.timeout .time { color: #b71c1c; background: rgba(255,255,255,0.6); }
         .card.timeout .member-avatar { border-color: var(--danger-border); }
 
         @keyframes pulse-glow {
@@ -152,7 +187,7 @@
     <header class="header-dash">
         <h1>THE UPRISING PROJECT - LIVE MONITOR</h1>
         <div style="font-size: 0.95rem; font-weight: 600; color: var(--text-sub);">
-            🔥 เรียงตามระยะเวลารอคอย (แสดงสูงสุด 14 เลน)
+            ✨ Handshake & Talk 30 Sec.
         </div>
     </header>
 
@@ -170,7 +205,6 @@
                 return { memberId: id, ...lanesDataStore[id] };
             });
 
-            // เรียงลำดับจากคิวสะสมมากสุดไปหาน้อยสุด
             sortedLanes.sort((a, b) => {
                 const countA = a.queueStack || 0;
                 const countB = b.queueStack || 0;
@@ -178,10 +212,9 @@
                 
                 const secA = a.totalSeconds || 0;
                 const secB = b.totalSeconds || 0;
-                return secA - secB; // ถ้าคิวเท่ากัน ให้เลนที่เหลือเวลาน้อยสุดอยู่ด้านบน
+                return secA - secB;
             });
 
-            // ล็อกสูงสุดไว้ที่ 14 บล็อกเลน
             let top14Lanes = sortedLanes.slice(0, 14);
             grid.innerHTML = '';
             
@@ -199,19 +232,20 @@
                 card.id = `card-${lane.memberId}`;
                 card.className = `card ${statusStr}`;
                 
+                // 💡 ปรับการเรนเดอร์โครงสร้างภายใน เน้นตัวเลขขนาดใหญ่ และจัดวางสวยงามสะดุดตา
                 card.innerHTML = `
                     <div class="profile-section">
                         <img class="member-avatar" src="img/${lane.memberId}.jpg" alt="${lane.name}" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'65\' height=\'65\' viewBox=\'0 0 65 65\'><rect width=\'65\' height=\'65\' fill=\'%23cbd5e1\'/><text x=\'50%\' y=\'55%\' font-family=\'sans-serif\' font-size=\'28\' fill=\'%2364748b\' text-anchor=\'middle\'>👤</text></svg>'">
                         <div class="name-box">
                             <div class="name">${lane.name}</div>
-                            <div class="current-ticket">คิวปัจจุบัน: ${currentTickets} ใบ</div>
+                            <div class="current-ticket">คิวปัจจุบัน: <strong>${currentTickets}</strong> ใบ</div>
                         </div>
                     </div>
                     <div class="status-section">
                         <div class="time">${min}:${sec}</div>
                         <div class="stack-badge">
-                            คิวรวม: <strong>${qStack}</strong> ใบ<br>
-                            รอ: <strong>${waitMinutes}</strong> นาที
+                            คิวรวม: <strong>${qStack}</strong> ใบ
+                            <div class="wait-time">⏱️ รอประมาณ ${waitMinutes} นาที</div>
                         </div>
                     </div>
                 `;
@@ -226,7 +260,6 @@
                 delete clearTimeouts[memberId];
             }
 
-            // บันทึก State ลง Store กลาง
             lanesDataStore[memberId] = {
                 name: name,
                 totalSeconds: totalSeconds || 0,
@@ -235,7 +268,6 @@
                 queueStack: queueStack || 0
             };
 
-            // หากคิวว่างสนิท ให้เริ่มนับถอยหลัง 10 วินาทีก่อนลบการ์ดออก
             if ((status === 'timeout' || status === 'idle') && (queueStack === 0)) {
                 clearTimeouts[memberId] = setTimeout(() => {
                     delete lanesDataStore[memberId];
