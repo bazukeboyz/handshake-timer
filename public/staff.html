@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Staff Multi-Lane Slider (5 Slots)</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        :root { --bg-color: #121214; --card-bg: #1e1e24; --text-color: #ffffff; --success: #16a34a; --warning: #eab308; --danger: #dc2626; --primary: #2563eb; --orange: #ea580c; }
+        body { background-color: var(--bg-color); color: var(--text-color); font-family: system-ui, -apple-system, sans-serif; padding: 0; margin: 0; overflow-x: hidden; }
+        h1 { font-size: 1.2rem; text-align: center; margin: 10px 0 5px 0; color: #58a6ff; }
+        .slider-wrapper { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scroll-behavior: smooth; -webkit-overflow-scrolling: touch; width: 100vw; height: calc(100vh - 45px); box-sizing: border-box; padding-bottom: 10px; }
+        .slider-wrapper::-webkit-scrollbar { display: none; }
+        .slot-card { flex: 0 0 100vw; scroll-snap-align: start; background: var(--card-bg); box-sizing: border-box; padding: 15px 20px; display: flex; flex-direction: column; gap: 8px; height: 100%; overflow-y: auto; }
+        .slot-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #3f3f46; padding-bottom: 5px; font-weight: bold; font-size: 1rem; color: #8b949e; }
+        .slot-indicator { background: #21262d; padding: 3px 8px; border-radius: 12px; font-size: 0.8rem; }
+        select { width: 100%; padding: 12px; background: #2d2d34; border: 1px solid #3f3f46; color: #fff; font-size: 1.1rem; border-radius: 8px; box-sizing: border-box; }
+        .ticket-stepper { display: flex; align-items: center; gap: 8px; width: 100%; margin: 2px 0; }
+        .btn-step { background: #3f3f46; color: white; border: none; width: 50px; height: 48px; font-size: 1.5rem; font-weight: bold; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .ticket-stepper input { flex: 1; text-align: center; height: 48px; font-size: 1.3rem; font-weight: bold; padding: 5px; background: #2d2d34; border: 1px solid #3f3f46; color: #fff; border-radius: 8px; }
+        .queue-control-grid { display: grid; grid-template-columns: 1.5fr 1fr; gap: 6px; }
+        .btn-action { width: 100%; padding: 12px; font-size: 1.1rem; font-weight: bold; border: none; border-radius: 6px; cursor: pointer; }
+        .btn-add-queue { background: var(--primary); color: white; }
+        .btn-remove-queue { background: var(--orange); color: white; }
+        .btn-start { background: var(--success); color: white; padding: 14px; font-size: 1.3rem; }
+        .btn-pause { background: var(--warning); color: #000; padding: 14px; font-size: 1.3rem; }
+        .btn-reset { background: #3f3f46; color: #ff6b6b; font-size: 0.85rem; padding: 8px; border: 1px solid #ff6b6b; margin-top: auto; cursor: pointer; }
+        .timer-box { font-size: 3rem; font-family: monospace; font-weight: bold; text-align: center; margin: 2px 0; color: #58a6ff; background: #121214; padding: 5px; border-radius: 8px; }
+        .queue-info { font-size: 0.9rem; text-align: center; color: #a0a0ab; background: rgba(0,0,0,0.3); padding: 8px; border-radius: 6px; }
+        .tray-title { font-size: 0.85rem; font-weight: bold; color: #58a6ff; margin-top: 2px; }
+        .queue-tray { display: flex; gap: 6px; overflow-x: auto; padding: 6px 4px; min-height: 38px; background: #121214; border-radius: 6px; border: 1px solid #2d2d34; }
+        .ticket-chunk { background: #21262d; border: 1px solid #30363d; color: #fff; font-weight: bold; font-size: 0.85rem; padding: 4px 8px; border-radius: 4px; display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+        .btn-delete-chunk { background: #ff6b6b; border: none; color: white; font-weight: bold; border-radius: 3px; cursor: pointer; padding: 0 5px; font-size: 0.8rem; }
+        .history-box { background: #121214; border: 1px solid #2d2d34; border-radius: 6px; padding: 6px 10px; max-height: 80px; overflow-y: auto; font-size: 0.8rem; color: #8b949e; list-style: none; text-align: left; margin: 0; }
+        .slot-card.running { border-color: var(--success); }
+        .slot-card.warning { border-color: var(--warning); background: #2d2410; }
+        .slot-card.timeout { border-color: var(--danger); background: #2d1616; }
+        .slider-nav { position: fixed; top: 10px; right: 15px; display: flex; gap: 5px; }
+        .nav-dot { width: 8px; height: 8px; background: #3f3f46; border-radius: 50%; transition: background 0.2s; }
+        .nav-dot.active { background: #58a6ff; width: 16px; border-radius: 4px; }
+    </style>
+</head>
+<body>
+
+    <h1>📱 Staff Controller</h1>
+    
+    <div class="slider-nav">
+        <div class="nav-dot active" id="dot-1"></div>
+        <div class="nav-dot" id="dot-2"></div>
+        <div class="nav-dot" id="dot-3"></div>
+        <div class="nav-dot" id="dot-4"></div>
+        <div class="nav-dot" id="dot-5"></div>
+    </div>
+
+    <div class="slider-wrapper" id="main-slider" onscroll="handleSliderScroll()">
+        <script>
+            const allMembers = [
+                { id: 'alice', name: 'Alice' }, { id: 'ame', name: 'Ame' }, { id: 'best', name: 'Best' },
+                { id: 'eri', name: 'Eri' }, { id: 'gracenae', name: 'Gracenae' }, { id: 'haru', name: 'Haru' },
+                { id: 'jan', name: 'Jan' }, { id: 'jennie', name: 'Jennie' }, { id: 'kartun', name: 'Kartun' },
+                { id: 'kitty', name: 'Kitty' }, { id: 'kris', name: 'Kris' }, { id: 'kwang', name: 'Kwang' }, 
+                { id: 'lilin', name: 'Lilin' }, { id: 'mickey', name: 'Mickey' }, { id: 'minmin', name: 'Minmin' }, 
+                { id: 'nisa', name: 'Nisa' }, { id: 'nori', name: 'Nori' }, { id: 'oum', name: 'Oum' }, 
+                { id: 'pear', name: 'Pear' }, { id: 'pin', name: 'Pin' }, { id: 'pixels', name: 'Pixels' }, 
+                { id: 'praew', name: 'Praew' }, { id: 'punch', name: 'Punch' }, { id: 'sai', name: 'Sai' }, 
+                { id: 'tonliw', name: 'Tonliw' }, { id: 'xiuzhen', name: 'Xiu Zhen' }
+            ];
+            for (let i = 1; i <= 5; i++) {
+                document.write(`
+                    <div class="slot-card" id="slot-${i}">
+                        <div class="slot-header">
+                            <span>SLOT ${i} <span class="slot-indicator">ปัดเปลี่ยนเลน ↔</span></span>
+                            <span class="status-text" id="status-${i}">พร้อมทำงาน</span>
+                        </div>
+                        
+                        <select id="member-${i}" onchange="handleMemberChange(${i})">
+                            <option value="">-- ว่าง (ปิดสล็อต) --</option>
+                            ${allMembers.map(m => `<option value="${m.id}">${m.name}</option>`).join('')}
+                        </select>
+                        
+                        <div class="ticket-stepper">
+                            <button class="btn-step" type="button" onclick="adjustTickets(${i}, -1)">−</button>
+                            <input type="number" id="tickets-${i}" value="1" min="1" max="100" readonly>
+                            <button class="btn-step" type="button" onclick="adjustTickets(${i}, 1)">+</button>
+                        </div>
+
+                        <div class="queue-control-grid">
+                            <button class="btn-action btn-add-queue" onclick="addTicketToQueue(${i})">+ เพิ่มคิว</button>
+                            <button class="btn-action btn-remove-queue" onclick="removeTicketFromQueue(${i})">- ลบออก</button>
+                        </div>
+                        
+                        <div class="tray-title">📥 ถาดตั๋วคิวสะสมในแถว:</div>
+                        <div class="queue-tray" id="tray-${i}">
+                            <span style="color:#484f58; font-size:0.8rem; padding:6px;">ไม่มีคิวค้าง...</span>
+                        </div>
+
+                        <div class="timer-box" id="clock-${i}">00:00</div>
+                        
+                        <div class="queue-info">
+                            ตั๋วรวมในเลน: <strong id="stack-${i}" style="color: #eab308;">0</strong> ใบ | 
+                            ⏱️ รอประมาณ: <strong id="wait-${i}" style="color: #fff;">0</strong> นาที
+                        </div>
+                        
+                        <button class="btn-action btn-start" id="btn-time-${i}" onclick="toggleTimer(${i})">START (เริ่มคิว)</button>
+                        
+                        <div class="tray-title">📜 ประวัติคิวที่ผ่านมา:</div>
+                        <ul class="history-box" id="log-${i}">
+                            <li>ยังไม่มีประวัติการจับมือในรอบนี้...</li>
+                        </ul>
+
+                        <button class="btn-reset" onclick="resetTimer(${i})">RESET ทั้งเลน</button>
+                    </div>
+                `);
+            }
+        </script>
+    </div>
+
+    <script>
+        const socket = io();
+        let slotStates = { 1: { currentStatus: 'idle', activeMemberId: '' }, 2: { currentStatus: 'idle', activeMemberId: '' }, 3: { currentStatus: 'idle', activeMemberId: '' }, 4: { currentStatus: 'idle', activeMemberId: '' }, 5: { currentStatus: 'idle', activeMemberId: '' } };
+
+        function handleSliderScroll() {
+            const slider = document.getElementById('main-slider');
+            const currentIndex = Math.round(slider.scrollLeft / window.innerWidth) + 1;
+            for(let i = 1; i <= 5; i++) {
+                document.getElementById(`dot-${i}`).className = (i === currentIndex) ? "nav-dot active" : "nav-dot";
+            }
+        }
+
+        function adjustTickets(slotNum, amount) {
+            const input = document.getElementById(`tickets-${slotNum}`);
+            let currentVal = parseInt(input.value) || 1;
+            let newVal = currentVal + amount;
+            if(newVal < 1) newVal = 1;
+            input.value = newVal;
+        }
+
+        function handleMemberChange(slotNum) {
+            slotStates[slotNum].activeMemberId = document.getElementById(`member-${slotNum}`).value;
+            resetSlotUI(slotNum);
+        }
+
+        function addTicketToQueue(slotNum) {
+            const memberId = slotStates[slotNum].activeMemberId;
+            if (!memberId || memberId === "") {
+                return alert(`[Slot ${slotNum}] กรุณาเลือกรายชื่อเมมเบอร์ก่อนกดเพิ่มคิวครับ!`);
+            }
+            const selectEl = document.getElementById(`member-${slotNum}`);
+            if (!selectEl || selectEl.selectedIndex < 0) return;
+            
+            const memberName = selectEl.options[selectEl.selectedIndex].text;
+            const tickets = parseInt(document.getElementById(`tickets-${slotNum}`).value) || 1;
+            socket.emit('add_to_stack', { memberId, tickets, name: memberName });
+        }
+
+        function removeTicketFromQueue(slotNum) {
+            const memberId = slotStates[slotNum].activeMemberId;
+            if (!memberId || memberId === "") {
+                return alert(`[Slot ${slotNum}] กรุณาเลือกรายชื่อเมมเบอร์ก่อนครับ!`);
+            }
+            const tickets = parseInt(document.getElementById(`tickets-${slotNum}`).value) || 1;
+            socket.emit('remove_from_stack', { memberId, tickets });
+        }
+
+        function removePiece(slotNum, index) {
+            const memberId = slotStates[slotNum].activeMemberId;
+            if(memberId) socket.emit('remove_piece_from_stack', { memberId, index });
+        }
+
+        function toggleTimer(slotNum) {
+            const memberId = slotStates[slotNum].activeMemberId;
+            if(!memberId || memberId === "") return alert('กรุณาเลือกเมมเบอร์ก่อนครับ');
+            const currentStatus = slotStates[slotNum].currentStatus;
+
+            if (currentStatus === 'running' || currentStatus === 'warning') {
+                socket.emit('pause_queue', { memberId });
+            } else {
+                const tray = document.getElementById(`tray-${slotNum}`);
+                if (tray.textContent.includes("ไม่มีคิวค้าง")) {
+                    return alert('กรุณากดปุ่ม "+ เพิ่มคิว" เพื่อส่งตั๋วเข้าถาดสะสมก่อนกดปุ่ม START ครับ');
+                }
+                // 💡 ส่งสัญญาณที่มีโครงสร้างครบถ้วนไปแมตช์หลังบ้าน
+                socket.emit('trigger_manual_start', { memberId: memberId });
+            }
+        }
+
+        function resetTimer(slotNum) {
+            const memberId = slotStates[slotNum].activeMemberId;
+            if(memberId && confirm('คุณต้องการล้างคิวทั้งหมดรวมถึงประวัติในเลนนี้ใช่หรือไม่?')) {
+                socket.emit('reset_queue', { memberId });
+            }
+        }
+
+        function resetSlotUI(slotNum) {
+            const card = document.getElementById(`slot-${slotNum}`);
+            card.className = "slot-card";
+            document.getElementById(`clock-${slotNum}`).textContent = "00:00";
+            document.getElementById(`status-${slotNum}`).textContent = "พร้อมทำงาน";
+            document.getElementById(`stack-${slotNum}`).textContent = "0";
+            document.getElementById(`wait-${slotNum}`).textContent = "0";
+            document.getElementById(`tickets-${slotNum}`).value = "1";
+            document.getElementById(`tray-${slotNum}`).innerHTML = '<span style="color:#484f58; font-size:0.8rem; padding:6px;">ไม่มีคิวค้าง...</span>';
+            document.getElementById(`log-${slotNum}`).innerHTML = '<li>ยังไม่มีประวัติการจับมือในรอบนี้...</li>';
+            
+            const btnTime = document.getElementById(`btn-time-${slotNum}`);
+            btnTime.textContent = "START (เริ่มคิว)";
+            btnTime.className = "btn-action btn-start";
+            slotStates[slotNum].currentStatus = 'idle';
+        }
+
+        socket.on('lane_updated', (payload) => {
+            for (let i = 1; i <= 5; i++) {
+                if (slotStates[i].activeMemberId === payload.memberId) {
+                    const { totalSeconds, status, queueStack, queueArray, historyLog } = payload.data;
+                    slotStates[i].currentStatus = status;
+                    
+                    const min = String(Math.floor(totalSeconds / 60)).padStart(2, '0');
+                    const sec = String(totalSeconds % 60).padStart(2, '0');
+                    document.getElementById(`clock-${i}`).textContent = `${min}:${sec}`;
+                    
+                    const qStack = queueStack || 0;
+                    document.getElementById(`stack-${i}`).textContent = qStack;
+                    document.getElementById(`wait-${i}`).textContent = Math.ceil((qStack * 30) / 60);
+
+                    const tray = document.getElementById(`tray-${i}`);
+                    if(queueArray && queueArray.length > 0) {
+                        tray.innerHTML = queueArray.map((t, idx) => `
+                            <div class="ticket-chunk" style="${idx === 0 && (status === 'running' || status === 'warning') ? 'border-color:var(--success); background:#142216;' : ''}">
+                                ${idx === 0 && (status === 'running' || status === 'warning') ? '🟢 คุยอยู่:' : '🎟️'} ${t} ใบ
+                                <button class="btn-delete-chunk" onclick="removePiece(${i}, ${idx})">×</button>
+                            </div>
+                        `).join('');
+                    } else {
+                        tray.innerHTML = '<span style="color:#484f58; font-size:0.8rem; padding:6px;">ไม่มีคิวค้าง...</span>';
+                    }
+
+                    const logBox = document.getElementById(`log-${i}`);
+                    if(historyLog && historyLog.length > 0) {
+                        logBox.innerHTML = historyLog.map(log => `<li>${log}</li>`).join('');
+                    } else {
+                        logBox.innerHTML = '<li>ยังไม่มีประวัติการจับมือในรอบนี้...</li>';
+                    }
+
+                    document.getElementById(`slot-${i}`).className = `slot-card ${status}`;
+                    const btnTime = document.getElementById(`btn-time-${i}`);
+                    
+                    if (status === 'running' || status === 'warning') {
+                        btnTime.textContent = "PAUSE (หยุดคิวชั่วคราว)";
+                        btnTime.className = "btn-action btn-warning";
+                        document.getElementById(`status-${i}`).textContent = status === 'warning' ? "ใกล้หมดเวลา" : "กำลังคุย";
+                    } else if (status === 'timeout') {
+                        btnTime.textContent = "ปล่อยคิวถัดไป ➔";
+                        btnTime.className = "btn-action btn-start";
+                        document.getElementById(`status-${i}`).textContent = "หมดเวลา (เชิญคนต่อไป)";
+                    } else {
+                        btnTime.textContent = "START (เดินเวลาต่อ)";
+                        btnTime.className = "btn-action btn-start";
+                        document.getElementById(`status-${i}`).textContent = "หยุดเวลาค้างไว้";
+                    }
+                }
+            }
+        });
+
+        socket.on('lane_reseted', (payload) => {
+            for (let i = 1; i <= 5; i++) { if (slotStates[i].activeMemberId === payload.memberId) resetSlotUI(i); }
+        });
+    </script>
+</body>
+</html>
