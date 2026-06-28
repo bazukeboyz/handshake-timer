@@ -3,38 +3,68 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Staff Multi-Lane Slider (5 Slots)</title>
+    <title>Staff Multi-Lane Slider (5 Colors & Audio Alert)</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
-        :root { --bg-color: #121214; --card-bg: #1e1e24; --text-color: #ffffff; --success: #16a34a; --warning: #eab308; --danger: #dc2626; --primary: #2563eb; --orange: #ea580c; }
+        :root { 
+            --bg-color: #0f0f11; 
+            --text-color: #ffffff; 
+            --success: #16a34a; 
+            --warning: #eab308; 
+            --danger: #dc2626; 
+            --primary: #2563eb; 
+            --orange: #ea580c; 
+        }
         body { background-color: var(--bg-color); color: var(--text-color); font-family: system-ui, -apple-system, sans-serif; padding: 0; margin: 0; overflow-x: hidden; }
         h1 { font-size: 1.2rem; text-align: center; margin: 10px 0 5px 0; color: #58a6ff; }
         .slider-wrapper { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scroll-behavior: smooth; -webkit-overflow-scrolling: touch; width: 100vw; height: calc(100vh - 45px); box-sizing: border-box; padding-bottom: 10px; }
         .slider-wrapper::-webkit-scrollbar { display: none; }
-        .slot-card { flex: 0 0 100vw; scroll-snap-align: start; background: var(--card-bg); box-sizing: border-box; padding: 15px 20px; display: flex; flex-direction: column; gap: 8px; height: 100%; overflow-y: auto; }
-        .slot-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #3f3f46; padding-bottom: 5px; font-weight: bold; font-size: 1rem; color: #8b949e; }
-        .slot-indicator { background: #21262d; padding: 3px 8px; border-radius: 12px; font-size: 0.8rem; }
-        select { width: 100%; padding: 12px; background: #2d2d34; border: 1px solid #3f3f46; color: #fff; font-size: 1.1rem; border-radius: 8px; box-sizing: border-box; }
+        
+        /* โครงสร้างการ์ดสล็อตหลัก */
+        .slot-card { flex: 0 0 100vw; scroll-snap-align: start; box-sizing: border-box; padding: 15px 20px; display: flex; flex-direction: column; gap: 8px; height: 100%; overflow-y: auto; transition: border-color 0.3s; border: 4px solid transparent; }
+        
+        /* 💡 1. แยกสีการ์ดหลังบ้าน (Background Color) ของทั้ง 5 สล็อต ป้องกันสตาฟสับสน */
+        #slot-1 { background-color: #1e1e24; } /* สล็อต 1: สีเทาเข้มชาร์โคล */
+        #slot-2 { background-color: #131c2e; } /* สล็อต 2: สีน้ำเงินมิดไนท์บลู */
+        #slot-3 { background-color: #0f241a; } /* สล็อต 3: สีเขียวฟอเรสต์ดาร์ก */
+        #slot-4 { background-color: #1f142c; } /* สล็อต 4: สีม่วงดาร์กพลัม */
+        #slot-5 { background-color: #2a1215; } /* สล็อต 5: สีแดงดาร์กเบอร์กันดี */
+
+        .slot-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.15); padding-bottom: 5px; font-weight: bold; font-size: 1rem; color: #cbd5e1; }
+        .slot-indicator { background: rgba(0,0,0,0.4); padding: 3px 8px; border-radius: 12px; font-size: 0.8rem; border: 1px solid rgba(255,255,255,0.1); }
+        select { width: 100%; padding: 12px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.2); color: #fff; font-size: 1.1rem; border-radius: 8px; box-sizing: border-box; }
+        
         .ticket-stepper { display: flex; align-items: center; gap: 8px; width: 100%; margin: 2px 0; }
-        .btn-step { background: #3f3f46; color: white; border: none; width: 50px; height: 48px; font-size: 1.5rem; font-weight: bold; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-        .ticket-stepper input { flex: 1; text-align: center; height: 48px; font-size: 1.3rem; font-weight: bold; padding: 5px; background: #2d2d34; border: 1px solid #3f3f46; color: #fff; border-radius: 8px; }
+        .btn-step { background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.1); width: 50px; height: 48px; font-size: 1.5rem; font-weight: bold; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .ticket-stepper input { flex: 1; text-align: center; height: 48px; font-size: 1.3rem; font-weight: bold; padding: 5px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.2); color: #fff; border-radius: 8px; }
+        
         .queue-control-grid { display: grid; grid-template-columns: 1.5fr 1fr; gap: 6px; }
         .btn-action { width: 100%; padding: 12px; font-size: 1.1rem; font-weight: bold; border: none; border-radius: 6px; cursor: pointer; }
         .btn-add-queue { background: var(--primary); color: white; }
         .btn-remove-queue { background: var(--orange); color: white; }
         .btn-start { background: var(--success); color: white; padding: 14px; font-size: 1.3rem; }
         .btn-pause { background: var(--warning); color: #000; padding: 14px; font-size: 1.3rem; }
-        .btn-reset { background: #3f3f46; color: #ff6b6b; font-size: 0.85rem; padding: 8px; border: 1px solid #ff6b6b; margin-top: auto; cursor: pointer; }
-        .timer-box { font-size: 3rem; font-family: monospace; font-weight: bold; text-align: center; margin: 2px 0; color: #58a6ff; background: #121214; padding: 5px; border-radius: 8px; }
-        .queue-info { font-size: 0.9rem; text-align: center; color: #a0a0ab; background: rgba(0,0,0,0.3); padding: 8px; border-radius: 6px; }
+        .btn-reset { background: rgba(0,0,0,0.3); color: #ff6b6b; font-size: 0.85rem; padding: 8px; border: 1px solid #ff6b6b; margin-top: auto; cursor: pointer; border-radius: 6px; }
+        
+        .timer-box { font-size: 3rem; font-family: monospace; font-weight: bold; text-align: center; margin: 2px 0; color: #58a6ff; background: rgba(0,0,0,0.4); padding: 5px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); }
+        .queue-info { font-size: 0.9rem; text-align: center; color: #cbd5e1; background: rgba(0,0,0,0.3); padding: 8px; border-radius: 6px; }
+        
         .tray-title { font-size: 0.85rem; font-weight: bold; color: #58a6ff; margin-top: 2px; }
-        .queue-tray { display: flex; gap: 6px; overflow-x: auto; padding: 6px 4px; min-height: 38px; background: #121214; border-radius: 6px; border: 1px solid #2d2d34; }
-        .ticket-chunk { background: #21262d; border: 1px solid #30363d; color: #fff; font-weight: bold; font-size: 0.85rem; padding: 4px 8px; border-radius: 4px; display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+        .queue-tray { display: flex; gap: 6px; overflow-x: auto; padding: 6px 4px; min-height: 38px; background: rgba(0,0,0,0.4); border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); }
+        .ticket-chunk { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-weight: bold; font-size: 0.85rem; padding: 4px 8px; border-radius: 4px; display: flex; align-items: center; gap: 6px; white-space: nowrap; }
         .btn-delete-chunk { background: #ff6b6b; border: none; color: white; font-weight: bold; border-radius: 3px; cursor: pointer; padding: 0 5px; font-size: 0.8rem; }
-        .history-box { background: #121214; border: 1px solid #2d2d34; border-radius: 6px; padding: 6px 10px; max-height: 80px; overflow-y: auto; font-size: 0.8rem; color: #8b949e; list-style: none; text-align: left; margin: 0; }
+        .history-box { background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; padding: 6px 10px; max-height: 80px; overflow-y: auto; font-size: 0.8rem; color: #94a3b8; list-style: none; text-align: left; margin: 0; }
+        
+        /* อนิเมชันสถานะไฟขอบการ์ด */
         .slot-card.running { border-color: var(--success); }
-        .slot-card.warning { border-color: var(--warning); background: #2d2410; }
-        .slot-card.timeout { border-color: var(--danger); background: #2d1616; }
+        .slot-card.warning { border-color: var(--warning); }
+        .slot-card.timeout { border-color: var(--danger); animation: blink-border 0.5s infinite alternate; }
+
+        @keyframes blink-border {
+            0% { border-color: var(--danger); }
+            100% { border-color: #ff5252; }
+        }
+
         .slider-nav { position: fixed; top: 10px; right: 15px; display: flex; gap: 5px; }
         .nav-dot { width: 8px; height: 8px; background: #3f3f46; border-radius: 50%; transition: background 0.2s; }
         .nav-dot.active { background: #58a6ff; width: 16px; border-radius: 4px; }
@@ -91,7 +121,7 @@
                         
                         <div class="tray-title">📥 ถาดตั๋วคิวสะสมในแถว:</div>
                         <div class="queue-tray" id="tray-${i}">
-                            <span style="color:#484f58; font-size:0.8rem; padding:6px;">ไม่มีคิวค้าง...</span>
+                            <span style="color:#8e9aa8; font-size:0.8rem; padding:6px;">ไม่มีคิวค้าง...</span>
                         </div>
 
                         <div class="timer-box" id="clock-${i}">00:00</div>
@@ -117,7 +147,25 @@
 
     <script>
         const socket = io();
-        let slotStates = { 1: { currentStatus: 'idle', activeMemberId: '' }, 2: { currentStatus: 'idle', activeMemberId: '' }, 3: { currentStatus: 'idle', activeMemberId: '' }, 4: { currentStatus: 'idle', activeMemberId: '' }, 5: { currentStatus: 'idle', activeMemberId: '' } };
+        let slotStates = { 1: { currentStatus: 'idle', activeMemberId: '', lastStatus: 'idle' }, 2: { currentStatus: 'idle', activeMemberId: '', lastStatus: 'idle' }, 3: { currentStatus: 'idle', activeMemberId: '', lastStatus: 'idle' }, 4: { currentStatus: 'idle', activeMemberId: '', lastStatus: 'idle' }, 5: { currentStatus: 'idle', activeMemberId: '', lastStatus: 'idle' } };
+
+        // 💡 2. ตัวสร้างเสียงบี๊บแจ้งเตือนทางอิเล็กทรอนิกส์โดยตรงผ่านเว็บเบราว์เซอร์ ไม่ต้องพึ่งพาไฟล์เสียงภายนอก
+        function playAlertSound() {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(880, ctx.currentTime); // เสียงสูงบี๊บๆ ชัดเจน
+                gain.gain.setValueAtTime(0.3, ctx.currentTime);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start();
+                // ยิงเสียง 2 จังหวะสั้นๆ
+                setTimeout(() => { osc.frequency.setValueAtTime(880, ctx.currentTime); }, 150);
+                setTimeout(() => { osc.stop(); ctx.close(); }, 300);
+            } catch(e) { console.log("Audio play blocked"); }
+        }
 
         function handleSliderScroll() {
             const slider = document.getElementById('main-slider');
@@ -167,6 +215,7 @@
             if(memberId) socket.emit('remove_piece_from_stack', { memberId, index });
         }
 
+        // 💡 3. แก้ลอจิกปุ่ม START: หากไม่มีคิวสะสมในเลน จะแอบแฝงการเพิ่มคิวและยิงคำสั่ง START ทันทีในคลิกเดียว
         function toggleTimer(slotNum) {
             const memberId = slotStates[slotNum].activeMemberId;
             if(!memberId || memberId === "") return alert('กรุณาเลือกเมมเบอร์ก่อนครับ');
@@ -176,11 +225,22 @@
                 socket.emit('pause_queue', { memberId });
             } else {
                 const tray = document.getElementById(`tray-${slotNum}`);
+                
+                // 🌟 หากสล็อตนี้ถาดคิวว่างสนิท (ไม่มีตั๋วค้างสะสมเลย)
                 if (tray.textContent.includes("ไม่มีคิวค้าง")) {
-                    return alert('กรุณากดปุ่ม "+ เพิ่มคิว" เพื่อส่งตั๋วเข้าถาดสะสมก่อนกดปุ่ม START ครับ');
+                    const selectEl = document.getElementById(`member-${slotNum}`);
+                    const memberName = selectEl.options[selectEl.selectedIndex].text;
+                    const tickets = parseInt(document.getElementById(`tickets-${slotNum}`).value) || 1;
+                    
+                    // สั่งขั้นตอนแบบ Fast-Pass: ยิงเพิ่มคิวเข้าไปหลังบ้าน แล้วสั่งสตาร์ตเวลาตามทันที
+                    socket.emit('add_to_stack', { memberId, tickets, name: memberName });
+                    setTimeout(() => {
+                        socket.emit('trigger_manual_start', { memberId: memberId });
+                    }, 150); // ดีเลย์สั้นๆ เพื่อให้ฐานข้อมูลจับกลุ่มตั๋วเสร็จก่อนรัน
+                } else {
+                    // หากมีคิวค้างปกติอยู่แล้ว ก็รันต่อตามปกติครับ
+                    socket.emit('trigger_manual_start', { memberId: memberId });
                 }
-                // 💡 ส่งสัญญาณที่มีโครงสร้างครบถ้วนไปแมตช์หลังบ้าน
-                socket.emit('trigger_manual_start', { memberId: memberId });
             }
         }
 
@@ -199,20 +259,33 @@
             document.getElementById(`stack-${slotNum}`).textContent = "0";
             document.getElementById(`wait-${slotNum}`).textContent = "0";
             document.getElementById(`tickets-${slotNum}`).value = "1";
-            document.getElementById(`tray-${slotNum}`).innerHTML = '<span style="color:#484f58; font-size:0.8rem; padding:6px;">ไม่มีคิวค้าง...</span>';
+            document.getElementById(`tray-${slotNum}`).innerHTML = '<span style="color:#8e9aa8; font-size:0.8rem; padding:6px;">ไม่มีคิวค้าง...</span>';
             document.getElementById(`log-${slotNum}`).innerHTML = '<li>ยังไม่มีประวัติการจับมือในรอบนี้...</li>';
             
             const btnTime = document.getElementById(`btn-time-${slotNum}`);
             btnTime.textContent = "START (เริ่มคิว)";
             btnTime.className = "btn-action btn-start";
             slotStates[slotNum].currentStatus = 'idle';
+            slotStates[slotNum].lastStatus = 'idle';
         }
 
         socket.on('lane_updated', (payload) => {
             for (let i = 1; i <= 5; i++) {
                 if (slotStates[i].activeMemberId === payload.memberId) {
                     const { totalSeconds, status, queueStack, queueArray, historyLog } = payload.data;
+                    
+                    // 💡 2. ดักจับสถานะหมดเวลา (ข้ามสล็อต): ถ้าสถานะเพิ่งเปลี่ยนเป็น timeout ให้ยิงเสียงบี๊บ และโชว์ป๊อปอัปแจ้งทันที
+                    if (status === 'timeout' && slotStates[i].lastStatus !== 'timeout') {
+                        playAlertSound();
+                        const selectEl = document.getElementById(`member-${i}`);
+                        const memberName = selectEl.options[selectEl.selectedIndex].text;
+                        
+                        // ขึ้นกล่องข้อความ Bubble แจ้งเตือนข้ามจอ
+                        alert(`⏰ [หมดเวลาแล้ว!] คิวของ ${memberName} ใน SLOT ${i} สนทนาเสร็จสิ้นแล้ว เชิญคนถัดไปได้เลยครับ`);
+                    }
+
                     slotStates[i].currentStatus = status;
+                    slotStates[i].lastStatus = status; // จำสถานะล่าสุดเอาไว้เทียบรอบถัดไป
                     
                     const min = String(Math.floor(totalSeconds / 60)).padStart(2, '0');
                     const sec = String(totalSeconds % 60).padStart(2, '0');
@@ -231,7 +304,7 @@
                             </div>
                         `).join('');
                     } else {
-                        tray.innerHTML = '<span style="color:#484f58; font-size:0.8rem; padding:6px;">ไม่มีคิวค้าง...</span>';
+                        tray.innerHTML = '<span style="color:#8e9aa8; font-size:0.8rem; padding:6px;">ไม่มีคิวค้าง...</span>';
                     }
 
                     const logBox = document.getElementById(`log-${i}`);
@@ -253,7 +326,7 @@
                         btnTime.className = "btn-action btn-start";
                         document.getElementById(`status-${i}`).textContent = "หมดเวลา (เชิญคนต่อไป)";
                     } else {
-                        btnTime.textContent = "START (เดินเวลาต่อ)";
+                        btnTime.textContent = "START (เริ่มคิว)";
                         btnTime.className = "btn-action btn-start";
                         document.getElementById(`status-${i}`).textContent = "หยุดเวลาค้างไว้";
                     }
