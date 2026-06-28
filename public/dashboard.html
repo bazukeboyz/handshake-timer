@@ -3,11 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Live Dashboard - BGG Theme Focus</title>
+    <title>Live Dashboard - Realtime Wait Focus</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
         :root {
-            /* 💡 ปรับความทึบแสงของกระจกฝ้าขึ้นเล็กน้อย (0.65) เพื่อให้ตัวหนังสือลอยเด่นเหนือนภาพพื้นหลังรุ้ง */
             --glass-bg: rgba(255, 255, 255, 0.65);
             --glass-border: rgba(255, 255, 255, 0.7);
             --text-main: #2d3748;
@@ -24,13 +23,11 @@
         * { box-sizing: border-box; }
 
         body { 
-            /* 💡 เปลี่ยนมาใช้ภาพพื้นหลัง BGG.jpg ล็อกสเกลเต็มจอแบบไม่ขยับตามการเลื่อน */
             background-image: url('img/BGG.jpg');
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
             background-attachment: fixed;
-            
             color: var(--text-main); 
             font-family: system-ui, -apple-system, sans-serif; 
             padding: 20px; 
@@ -111,17 +108,8 @@
         }
 
         .name-box { display: flex; flex-direction: column; min-width: 0; gap: 2px; }
+        .name { font-size: 2.2rem; font-weight: 900; color: #3b0d3d; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.1; }
         
-        .name { 
-            font-size: 2.2rem; 
-            font-weight: 900; 
-            color: #3b0d3d;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            line-height: 1.1;
-        }
-
         .current-ticket { 
             font-size: 1.1rem; 
             color: #4a5568; 
@@ -198,7 +186,7 @@
                 return { memberId: id, ...lanesDataStore[id] };
             });
 
-            // เรียงลำดับคิวสะสมจากมากไปน้อย
+            // เรียงลำดับจากยอดรวมตั๋วสะสมมากสุดไปน้อยสุด
             sortedLanes.sort((a, b) => {
                 const countA = a.queueStack || 0;
                 const countB = b.queueStack || 0;
@@ -214,9 +202,23 @@
             
             top14Lanes.forEach(lane => {
                 const qStack = lane.queueStack || 0;
-                const waitMinutes = Math.ceil((qStack * 30) / 60);
                 const currentTickets = lane.tickets || 0;
                 const statusStr = lane.status || 'idle';
+                const currentRunningSeconds = lane.totalSeconds || 0;
+
+                // 💡 🌟 ปรับปรุงลอจิกการคำนวณนาทีตรงนี้ใหม่ให้ตรงตามวินาทีจริง!
+                let totalWaitSeconds = 0;
+                if (statusStr === 'running' || statusStr === 'warning') {
+                    // หากเวลากำลังวิ่งอยู่: ระยะเวลารอจริง = วินาทีที่เหลือของคิวปัจจุบัน + (ตั๋วคิวสะสมก้อนที่เหลือล่วงหน้าหลังแถว * 30 วินาที)
+                    const remainingQueueTickets = Math.max(0, qStack - currentTickets);
+                    totalWaitSeconds = currentRunningSeconds + (remainingQueueTickets * 30);
+                } else {
+                    // หากเวลายังไม่เดิน: คิดตามจำนวนตั๋วทั้งหมดคูณ 30
+                    totalWaitSeconds = qStack * 30;
+                }
+
+                // แปลงวินาทีรวมออกมาเป็นนาทีจริง Math.ceil ปรับเศษขึ้นแบบ Real-time
+                const waitMinutes = Math.ceil(totalWaitSeconds / 60);
 
                 const card = document.createElement('div');
                 card.id = `card-${lane.memberId}`;
@@ -232,7 +234,7 @@
                     </div>
                     <div class="status-section">
                         <div class="stack-badge">
-                            <span class="wait-highlight">⏱️ รอ ~ ${waitMinutes} นาที</span>
+                            <span class="wait-highlight">⏱ รอประมาณ ~ ${waitMinutes} นาที</span>
                             <span class="total-queue">คิวสะสมทั้งหมด: ${qStack} ใบ</span>
                         </div>
                     </div>
