@@ -284,8 +284,9 @@
             if (currentStatus === 'running' || currentStatus === 'warning') {
                 socket.emit('pause_queue', { memberId });
             } else {
-                const tray = document.getElementById(`tray-${slotNum}`);
-                if (tray.textContent.includes("ไม่มีคิวค้าง")) {
+                const laneData = serverLanesCache[memberId];
+                const hasQueue = laneData && laneData.queueArray && laneData.queueArray.length > 0;
+                if (!hasQueue) {
                     const selectEl = document.getElementById(`member-${slotNum}`);
                     const memberName = selectEl.options[selectEl.selectedIndex].text;
                     const tickets = parseInt(document.getElementById(`tickets-${slotNum}`).value) || 1;

@@ -6,7 +6,16 @@ const path = require('path');
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-let lanes = {}; 
+let lanes = {};
+
+// ponytail: single trust-boundary guard — every socket handler reads memberId/tickets/index from the client
+function isValidMemberId(memberId) {
+    return typeof memberId === 'string' && memberId.length > 0 && memberId.length < 100;
+}
+function toPositiveInt(n) {
+    const v = parseInt(n, 10);
+    return Number.isInteger(v) && v > 0 ? v : null;
+}
 
 // ฟังก์ชันคำนวณยอดรวมตั๋วค้างทั้งหมดในถาดสะสม
 function getQueueStackCount(memberId) {
@@ -82,17 +91,22 @@ io.on('connection', (socket) => {
 
     // 📥 ปุ่มเพิ่มคิวสะสมล่วงหน้า
     socket.on('add_to_stack', (data) => {
-        const { memberId, tickets, name } = data;
+        const { memberId, tickets, name } = data || {};
+        const validTickets = toPositiveInt(tickets);
+        if (!isValidMemberId(memberId) || !validTickets) return;
+
         if (!lanes[memberId]) {
-            lanes[memberId] = { name, totalSeconds: 0, isRunning: false, tickets: 0, status: 'idle', queueArray: [], historyLog: [], intervalId: null };
+            lanes[memberId] = { name: String(name || memberId), totalSeconds: 0, isRunning: false, tickets: 0, status: 'idle', queueArray: [], historyLog: [], intervalId: null };
         }
-        lanes[memberId].queueArray.push(tickets);
+        lanes[memberId].queueArray.push(validTickets);
         broadcastLaneUpdate(memberId);
     });
 
     // 🔸 ปุ่มหักลบยอดคิวถอยหลังออกจากกองท้ายสุด (- ลบออก)
     socket.on('remove_from_stack', (data) => {
-        const { memberId, tickets } = data;
+        const { memberId, tickets } = data || {};
+        const validTickets = toPositiveInt(tickets);
+        if (!isValidMemberId(memberId) || !validTickets) return;
         if (lanes[memberId] && lanes[memberId].queueArray.length > 0) {
             let lastIdx = lanes[memberId].queueArray.length - 1;
             
@@ -101,7 +115,7 @@ io.on('connection', (socket) => {
                 return; 
             }
 
-            lanes[memberId].queueArray[lastIdx] -= tickets;
+            lanes[memberId].queueArray[lastIdx] -= validTickets;
             if (lanes[memberId].queueArray[lastIdx] <= 0) lanes[memberId].queueArray.pop();
             broadcastLaneUpdate(memberId);
         }
@@ -109,7 +123,8 @@ io.on('connection', (socket) => {
 
     // ❌ ปุ่มกากบาทคลิกลบตั๋วเฉพาะก้อนในถาดสะสม
     socket.on('remove_piece_from_stack', (data) => {
-        const { memberId, index } = data;
+        const { memberId, index } = data || {};
+        if (!isValidMemberId(memberId) || !Number.isInteger(index) || index < 0) return;
         if (lanes[memberId] && lanes[memberId].queueArray[index] !== undefined) {
             
             // 💡 [ล็อกเซฟตี้จุดที่ 2]: หากสตาฟกดลบตั๋วก้อนดัชนีที่ 0 (ก้อนแรกสุด) ขณะที่กำลังนับเวลาคุยอยู่ ห้ามลบเด็ดขาด!
@@ -123,23 +138,27 @@ io.on('connection', (socket) => {
     });
 
     socket.on('trigger_manual_start', (data) => {
-        const { memberId } = data;
+        const { memberId } = data || {};
+        if (!isValidMemberId(memberId)) return;
         if (lanes[memberId] && lanes[memberId].queueArray.length > 0 && !lanes[memberId].isRunning) {
             startLaneCountdown(memberId);
         }
     });
 
     socket.on('pause_queue', (data) => {
-        if (lanes[data.memberId] && lanes[data.memberId].isRunning) {
-            clearInterval(lanes[data.memberId].intervalId);
-            lanes[data.memberId].isRunning = false;
-            lanes[data.memberId].status = 'paused';
-            broadcastLaneUpdate(data.memberId);
+        const { memberId } = data || {};
+        if (!isValidMemberId(memberId)) return;
+        if (lanes[memberId] && lanes[memberId].isRunning) {
+            clearInterval(lanes[memberId].intervalId);
+            lanes[memberId].isRunning = false;
+            lanes[memberId].status = 'paused';
+            broadcastLaneUpdate(memberId);
         }
     });
 
     socket.on('reset_queue', (data) => {
-        const { memberId } = data;
+        const { memberId } = data || {};
+        if (!isValidMemberId(memberId)) return;
         if (lanes[memberId]) { clearInterval(lanes[memberId].intervalId); delete lanes[memberId]; }
         io.emit('lane_reseted', { memberId });
     });
