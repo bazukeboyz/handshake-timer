@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Live Dashboard - BGG Core Focus</title>
+    <title>Live Dashboard - Optimized 768p Focus</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
         :root {
@@ -12,7 +12,9 @@
             --text-main: #2d3748;
             --text-sub: #4a5568;
             --success-border: #81c784;
-            --success-bg: rgba(232, 245, 233, 0.8);
+            --success-bg: rgba(232, 245, 233, 0.85);
+            --idle-border: #c4b5fd;
+            --idle-bg: rgba(245, 243, 255, 0.75);
         }
 
         * { box-sizing: border-box; }
@@ -25,37 +27,126 @@
             background-attachment: fixed;
             color: var(--text-main); 
             font-family: system-ui, -apple-system, sans-serif; 
-            padding: 20px; 
+            padding: 15px; 
             margin: 0; 
             min-height: 100vh;
+            overflow-x: hidden;
         }
 
-        .header-dash { display: flex; justify-content: space-between; align-items: center; background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid var(--glass-border); padding: 12px 25px; border-radius: 14px; margin-bottom: 20px; box-shadow: 0 4px 20px 0 rgba(162, 142, 179, 0.15); }
-        .header-dash h1 { margin: 0; font-size: 1.5rem; font-weight: 800; background: linear-gradient(45deg, #6b46c1, #b83280); -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: 0.5px; }
+        .header-dash { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            background: rgba(255, 255, 255, 0.4); 
+            backdrop-filter: blur(12px); 
+            -webkit-backdrop-filter: blur(12px); 
+            border: 1px solid var(--glass-border); 
+            padding: 10px 20px; 
+            border-radius: 12px; 
+            margin-bottom: 15px; 
+            box-shadow: 0 4px 20px 0 rgba(162, 142, 179, 0.15); 
+        }
+        .header-dash h1 { 
+            margin: 0; 
+            font-size: 1.4rem; 
+            font-weight: 800; 
+            background: linear-gradient(45deg, #6b46c1, #b83280); 
+            -webkit-background-clip: text; 
+            -webkit-text-fill-color: transparent; 
+            letter-spacing: 0.5px; 
+        }
 
-        .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; max-width: 1400px; margin: 0 auto; }
-        /* เมื่อมีเมมเบอร์เกิน 10 คน สลับเป็น 3 คอลัมน์เพื่อให้ครบ 14 ใบในจอเดียวโดยไม่ตกขอบ */
-        .grid.cols-3 { grid-template-columns: repeat(3, 1fr); gap: 10px; }
+        /* รีดีไซน์ Grid เพื่อรองรับขนาดจอ 1344x768px โดยเฉพาะ */
+        .grid { 
+            display: grid; 
+            grid-template-columns: repeat(2, 1fr); 
+            gap: 12px; 
+            max-width: 1320px; 
+            margin: 0 auto; 
+        }
+        /* เมื่อรัน 11-14 คน ปรับสัดส่วน 3 คอลัมน์ให้กระชับพอดีความสูงแนวตั้ง */
+        .grid.cols-3 { 
+            grid-template-columns: repeat(3, 1fr); 
+            gap: 10px; 
+        }
 
-        .card { background: var(--glass-bg); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); border: 1px solid var(--glass-border); border-radius: 18px; padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; gap: 15px; box-shadow: 0 6px 20px 0 rgba(142, 148, 179, 0.12); transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.2s ease, opacity 0.5s ease; opacity: 1; }
-        /* โหมดย่อขนาด: ซ่อนรูปและลด padding เพื่อเพิ่มพื้นที่แสดงผลตอนมีเลนจำนวนมาก */
-        .card.compact { padding: 10px 14px; gap: 8px; }
-        .card.compact .member-avatar { display: none; }
+        .card { 
+            background: var(--glass-bg); 
+            backdrop-filter: blur(16px); 
+            -webkit-backdrop-filter: blur(16px); 
+            border: 1px solid var(--glass-border); 
+            border-radius: 16px; 
+            padding: 14px 20px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between; 
+            gap: 12px; 
+            box-shadow: 0 4px 15px 0 rgba(142, 148, 179, 0.1); 
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            height: 105px; /* ล็อกความสูงคงที่เพื่อให้เรียงแถวสวยงามบนจอ 768px */
+        }
+        
+        /* สไตล์พิเศษสำหรับโหมดกะทัดรัดเมื่อแสดงผล 11-14 เลน */
+        .grid.cols-3 .card { 
+            padding: 10px 14px; 
+            gap: 8px;
+            height: 90px; /* ย่อความสูงลงเล็กน้อยเพื่อไม่ให้ตกขอบล่างของจอภาพ */
+        }
 
-        .profile-section { display: flex; align-items: center; gap: 18px; flex: 1; min-width: 0; }
-        .member-avatar { width: 75px; height: 75px; border-radius: 50%; object-fit: cover; border: 2px solid white; box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08); background: #e2e8f0; flex-shrink: 0; }
+        .profile-section { 
+            display: flex; 
+            align-items: center; 
+            gap: 12px; 
+            flex: 1; 
+            min-width: 0; 
+        }
+        
+        .member-avatar { 
+            width: 70px; 
+            height: 70px; 
+            border-radius: 50%; 
+            object-fit: cover; 
+            border: 2px solid white; 
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08); 
+            background: #e2e8f0; 
+            flex-shrink: 0; 
+        }
+        /* ห้ามซ่อนรูปภาพในโหมด 3 คอลัมน์ แต่ให้ย่อขนาดลงเล็กน้อยเพื่อให้ชื่อมีพื้นที่เพิ่มขึ้น */
+        .grid.cols-3 .member-avatar {
+            width: 55px;
+            height: 55px;
+        }
+
+        .booth-badge { 
+            color: #fff; 
+            font-weight: 900; 
+            font-size: 1.6rem; 
+            padding: 4px 10px; 
+            border-radius: 8px; 
+            flex-shrink: 0; 
+            min-width: 52px; 
+            text-align: center; 
+            line-height: 1.2;
+        }
+        .grid.cols-3 .booth-badge { 
+            font-size: 1.3rem; 
+            padding: 3px 8px; 
+            min-width: 44px; 
+        }
+
+        .booth-badge.group-L { background: #2563eb; }
+        .booth-badge.group-C { background: #16a34a; }
+        .booth-badge.group-R { background: #dc2626; }
         
         .name-box { 
             display: flex; 
             flex-direction: column; 
             min-width: 0; 
-            gap: 2px; 
-            justify-content: center; /* จัดตำแหน่งกึ่งกลางแนวดิ่งอย่างสวยงามแทนที่ข้อความเดิม */
+            flex: 1;
+            justify-content: center; 
         }
         
-        /* 💡 🌟 ปรับขนาดชื่อศิลปินของระบบที่ 2 ให้ใหญ่สะดุดตาพิเศษระนาบเดียวกัน */
         .name { 
-            font-size: 2.8rem; 
             font-weight: 900; 
             color: #3b0d3d; 
             white-space: nowrap; 
@@ -64,22 +155,51 @@
             line-height: 1.1; 
         }
         
-        .status-section { display: flex; align-items: center; }
+        .status-section { 
+            display: flex; 
+            align-items: center; 
+            flex-shrink: 0;
+        }
 
-        .stack-badge { background: rgba(255, 255, 255, 0.75); border: 1px solid rgba(255, 255, 255, 0.9); border-radius: 14px; padding: 8px 18px; font-size: 1.15rem; font-weight: 700; color: var(--text-main); text-align: center; line-height: 1.4; min-width: 160px; box-shadow: 0 4px 10px rgba(0,0,0,0.02); }
-        .stack-badge .wait-highlight { color: #b83280; font-size: 1.6rem; font-weight: 900; display: block; margin-bottom: 1px; }
-        .stack-badge .total-queue { font-size: 0.85rem; color: #64748b; font-weight: 600; }
-        .card.compact .stack-badge { min-width: 110px; padding: 6px 10px; }
-        .card.compact .stack-badge .wait-highlight { font-size: 1.15rem; }
-        .card.compact .stack-badge .total-queue { font-size: 0.7rem; }
+        /* รีดีไซน์ชิปข้อมูลตัวเลขเวลารอคอยเดี่ยวแบบอ่านง่ายกระแทกตา */
+        .info-chip { 
+            display: flex; 
+            align-items: baseline; 
+            gap: 3px; 
+            background: rgba(255, 255, 255, 0.8); 
+            border: 1px solid rgba(255, 255, 255, 0.95); 
+            border-radius: 10px; 
+            padding: 6px 12px; 
+            white-space: nowrap; 
+            box-shadow: 0 2px 6px rgba(0,0,0,0.02); 
+        }
+        .info-chip .chip-text { font-size: 0.8rem; color: #4a5568; font-weight: 700; }
+        .info-chip .chip-number { font-size: 1.8rem; font-weight: 900; color: #b83280; line-height: 1; }
+
+        .grid.cols-3 .info-chip { 
+            padding: 4px 8px; 
+        }
+        .grid.cols-3 .info-chip .chip-text { font-size: 0.7rem; }
+        .grid.cols-3 .info-chip .chip-number { font-size: 1.4rem; }
+
+        .toggle-numbers-btn { padding: 6px 14px; font-size: 0.8rem; font-weight: 700; color: #4a154b; background: rgba(255, 255, 255, 0.6); border: 1px solid var(--glass-border); border-radius: 20px; cursor: pointer; }
+        .toggle-numbers-btn.active { background: #6b46c1; color: #fff; border-color: #6b46c1; }
+
+        body.numbers-hidden .status-section { display: none !important; }
+
+        .card.running { background: var(--success-bg); border-color: var(--success-border); }
+        .card.running .member-avatar { border-color: var(--success-border); }
+        .card.idle-booth { background: var(--idle-bg); border-color: var(--idle-border); }
+        .card.idle-booth .member-avatar { border-color: var(--idle-border); }
     </style>
 </head>
 <body>
 
     <header class="header-dash">
         <h1>THE UPRISING PROJECT - LIVE MONITOR</h1>
-        <div style="font-size: 0.95rem; font-weight: 600; color: var(--text-sub);">
+        <div style="font-size: 0.85rem; font-weight: 600; color: var(--text-sub); display: flex; align-items: center; gap: 10px;">
             ✨ Handshake & Talk 30 Sec.
+            <button class="toggle-numbers-btn" id="toggle-numbers-btn" onclick="toggleNumbers()">👁️ ซ่อนเวลาทั้งหมด</button>
         </div>
     </header>
 
@@ -91,14 +211,29 @@
         let lanesDataStore = {};
         let clearTimeouts = {};
 
-        // คำนวณขนาดฟอนต์ชื่อแบบไดนามิก: ชื่อยาวกว่า 5 ตัวอักษรจะถูกย่อขนาดลงเพื่อไม่ให้ล้นกรอบ/ถูกตัด (...)
+        const BOOTH_ORDER = ['L1','L2','L3','L4','C1','C2','C3','C4','R1','R2','R3','R4','R5','R6','R7'];
+
+        function toggleNumbers() {
+            const isHidden = document.body.classList.toggle('numbers-hidden');
+            const btn = document.getElementById('toggle-numbers-btn');
+            btn.textContent = isHidden ? '👁️ แสดงเวลาทั้งหมด' : '👁️ ซ่อนเวลาทั้งหมด';
+            btn.classList.toggle('active', isHidden);
+        }
+
+        // 💡 🌟 ปรับจูนระบบคำนวณขนาดฟอนต์ของชื่อศิลปิน (Dynamic Text Fit) ให้สมบูรณ์แบบบนจอความกว้าง 1344px
         function getNameFontSize(name, compact) {
             const len = (name || '').length;
-            let size = 2.8;
-            if (len > 9) size = 1.5;
+            let size = 2.4; // ขนาดเริ่มต้นมาตรฐานสำหรับชื่อสั้น
+            
+            if (len > 12) size = 1.3;
+            else if (len > 9) size = 1.5;
             else if (len > 7) size = 1.8;
-            else if (len > 5) size = 2.2;
-            if (compact) size = size * 0.6;
+            else if (len > 5) size = 2.1;
+            
+            // ในโหมด 3 คอลัมน์ ย่อขนาดลงอีก 10% เพื่อล็อกไม่ให้ฟอนต์ล้นเบียดชิปเวลาด้านขวา
+            if (compact) {
+                size = size * 0.90;
+            }
             return size.toFixed(2);
         }
 
@@ -107,12 +242,20 @@
                 return { memberId: id, ...lanesDataStore[id] };
             });
 
-            let activeLanes = sortedLanes.filter(l => (l.queueStack || 0) > 0);
-            activeLanes.sort((a, b) => (b.queueStack || 0) - (a.queueStack || 0));
+            let activeLanes = sortedLanes.filter(l => (l.queueStack || 0) > 0 || l.booth);
+
+            activeLanes.sort((a, b) => {
+                const idxA = BOOTH_ORDER.indexOf(a.booth);
+                const idxB = BOOTH_ORDER.indexOf(b.booth);
+                const rankA = idxA === -1 ? BOOTH_ORDER.length : idxA;
+                const rankB = idxB === -1 ? BOOTH_ORDER.length : idxB;
+                if (rankA !== rankB) return rankA - rankB;
+                return (b.queueStack || 0) - (a.queueStack || 0);
+            });
 
             let top14Lanes = activeLanes.slice(0, 14);
 
-            // เกิน 10 เลนขึ้นไป สลับเป็น 3 คอลัมน์ + ซ่อนรูปเพื่อให้แสดงครบ 14 เลนในจอเดียว
+            // เมื่อมีจำนวนเมมเบอร์ตั้งแต่ 11 คนขึ้นไป เปลี่ยนคอลัมน์เป็น 3 ช่องเพื่อบีบแนวตั้งไม่ให้หลุดจอ 768px
             const isCompact = top14Lanes.length > 10;
             grid.className = isCompact ? 'grid cols-3' : 'grid';
             grid.innerHTML = '';
@@ -121,36 +264,42 @@
                 const qStack = lane.queueStack || 0;
                 const waitMinutes = Math.ceil((qStack * 30) / 60);
                 const nameFontSize = getNameFontSize(lane.name, isCompact);
+                const boothGroup = lane.booth ? `group-${lane.booth.charAt(0)}` : '';
 
                 const card = document.createElement('div');
                 card.id = `card-${lane.memberId}`;
-                card.className = `card running${isCompact ? ' compact' : ''}`;
+                card.className = `card ${qStack > 0 ? 'running' : 'idle-booth'}`;
 
-                // 💡 🌟 นำเอาข้อความ "เลนกำลังเปิดให้บริการ" ออก และใช้โครงสร้างชื่อแบบขยายใหญ่พิเศษ
+                // 💡 🌟 หัวใจสำคัญ: ถอดชิปคิวสะสมออก เหลือเพียงกล่องเวลารอคอย 
+                // และหากคิวเป็น 0 (`qStack === 0`) โครงสร้างฝั่งขวาใน status-section จะถูกปล่อยว่าง (ซ่อนเวลาโดยอัตโนมัติ)
                 card.innerHTML = `
                     <div class="profile-section">
+                        ${lane.booth ? `<div class="booth-badge ${boothGroup}">${lane.booth}</div>` : ''}
                         <img class="member-avatar" src="img/${lane.memberId}.jpg" alt="${lane.name}" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'75\' height=\'75\' viewBox=\'0 0 75 75\'><rect width=\'75\' height=\'75\' fill=\'%23cbd5e1\'/><text x=\'50%\' y=\'55%\' font-family=\'sans-serif\' font-size=\'32\' fill=\'%2364748b\' text-anchor=\'middle\'>👤</text></svg>'">
                         <div class="name-box">
                             <div class="name" style="font-size:${nameFontSize}rem">${lane.name}</div>
                         </div>
                     </div>
                     <div class="status-section">
-                        <div class="stack-badge">
-                            <span class="wait-highlight">⏱ รอประมาณ ~ ${waitMinutes} นาที</span>
-                            <span class="total-queue">จำนวนตั๋วสะสม: ${qStack} ใบ</span>
+                        ${qStack > 0 ? `
+                        <div class="info-chip">
+                            <span class="chip-text">รอ ~</span>
+                            <span class="chip-number">${waitMinutes}</span>
+                            <span class="chip-text">นาที</span>
                         </div>
+                        ` : ''}
                     </div>
                 `;
                 grid.appendChild(card);
             });
         }
 
-        function processLaneUpdate(memberId, name, totalSeconds, status, tickets, queueStack = 0) {
+        function processLaneUpdate(memberId, name, totalSeconds, status, tickets, queueStack = 0, booth = '') {
             if (clearTimeouts[memberId]) { clearTimeout(clearTimeouts[memberId]); delete clearTimeouts[memberId]; }
 
-            lanesDataStore[memberId] = { name, totalSeconds, status, tickets, queueStack };
+            lanesDataStore[memberId] = { name, totalSeconds, status, tickets, queueStack, booth };
 
-            if ((status === 'timeout' || status === 'idle') && queueStack === 0) {
+            if ((status === 'timeout' || status === 'idle') && queueStack === 0 && !booth) {
                 clearTimeouts[memberId] = setTimeout(() => {
                     delete lanesDataStore[memberId];
                     renderSortedGrid();
@@ -165,7 +314,7 @@
             if (allLanes) {
                 Object.keys(allLanes).forEach(id => {
                     const lane = allLanes[id];
-                    lanesDataStore[id] = { name: lane.name, totalSeconds: lane.totalSeconds || 0, status: lane.status || 'idle', tickets: lane.tickets || 0, queueStack: lane.queueStack || 0 };
+                    lanesDataStore[id] = { name: lane.name, totalSeconds: lane.totalSeconds || 0, status: lane.status || 'idle', tickets: lane.tickets || 0, queueStack: lane.queueStack || 0, booth: lane.booth || '' };
                 });
             }
             renderSortedGrid();
@@ -174,13 +323,19 @@
         socket.on('lane_updated', (payload) => {
             if (!payload || !payload.memberId || !payload.data) return;
             const name = lanesDataStore[payload.memberId] ? lanesDataStore[payload.memberId].name : payload.memberId.toUpperCase();
-            processLaneUpdate(payload.memberId, name, payload.data.totalSeconds, payload.data.status, payload.data.tickets, payload.data.queueStack);
+            processLaneUpdate(payload.memberId, name, payload.data.totalSeconds, payload.data.status, payload.data.tickets, payload.data.queueStack, payload.data.booth);
         });
         
-        socket.on('lane_reseted', (payload) => { 
+        socket.on('lane_reseted', (payload) => {
             if (!payload || !payload.memberId) return;
             if (clearTimeouts[payload.memberId]) clearTimeout(clearTimeouts[payload.memberId]);
-            delete lanesDataStore[payload.memberId]; 
+            if (payload.booth) {
+                // server keeps the booth assignment after reset, so keep it on screen too
+                const prevName = lanesDataStore[payload.memberId] ? lanesDataStore[payload.memberId].name : '';
+                lanesDataStore[payload.memberId] = { name: prevName, totalSeconds: 0, status: 'idle', tickets: 0, queueStack: 0, booth: payload.booth };
+            } else {
+                delete lanesDataStore[payload.memberId];
+            }
             renderSortedGrid();
         });
     </script>
